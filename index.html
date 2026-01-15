@@ -10,19 +10,21 @@
       --pad: 22px;
       --inner-max: 1100px;
 
-      --inner-bg: rgba(255,255,255,0.82);
+      /* Unified glass look (Menu-Button + Content) */
+      --glass-bg: rgba(255,255,255,.10);
+      --glass-border: rgba(255,255,255,.18);
+      --glass-shadow: 0 10px 26px rgba(0,0,0,.25);
+      --glass-blur: blur(12px);
+
       --inner-text: #0f172a;
 
       --bg-overlay: rgba(0,0,0,.42);
 
       --nav-size: 60px;
-      --nav-open-w: 280px;
-      --nav-open-h: 230px;
-      --nav-gap: 10px;
+      --nav-open-w: 300px;
+      --nav-open-h: 290px;
+      --nav-gap: 12px;
       --nav-right: 26px;
-
-      --panel-bg: rgba(255,255,255,0.10);
-      --panel-border: rgba(255,255,255,0.18);
 
       --snap-ms: 520ms;
       --fade-ms: 1200ms;
@@ -74,24 +76,40 @@
       align-items:center;
       justify-content:center;
     }
+
+    /* CONTENT CONTAINER (now same glass optics as menu button) */
     .inner-container{
       width: min(var(--inner-max), 100%);
       max-height: calc(100vh - (var(--pad) * 2));
-      background: var(--inner-bg);
-      color: var(--inner-text);
+      color: #fff;
+
       border-radius: 18px;
+      border: 1px solid var(--glass-border);
+      background: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
       box-shadow: var(--shadow);
+
       padding: 18px;
-      border: 1px solid rgba(15,23,42,.08);
       overflow:hidden;
     }
+
+    /* optional: readable content base color inside sections */
+    .inner-container .content-surface{
+      border-radius: 14px;
+      background: rgba(255,255,255,0.85);
+      color: var(--inner-text);
+      padding: 16px;
+      border: 1px solid rgba(15,23,42,.08);
+    }
+
     .section[data-inner-scroll="true"] .inner-container{
       overflow:auto;
       -webkit-overflow-scrolling: touch;
       padding-right: 10px;
     }
 
-    /* NAV */
+    /* NAV (bigger hit-area) */
     #icon-nav{
       position:fixed;
       right: var(--nav-right);
@@ -99,22 +117,25 @@
       transform: translateY(-50%);
       z-index:50;
 
-      width: var(--nav-size);
-      height: var(--nav-size);
+      width: calc(var(--nav-size) + 34px);  /* hit area */
+      height: calc(var(--nav-size) + 34px); /* hit area */
 
       display:flex;
       align-items:center;
       justify-content:flex-end;
+
+      padding: 17px; /* invisible padding to make it easy to reach */
     }
 
     #nav-toggle{
       width: var(--nav-size);
       height: var(--nav-size);
       border-radius: 999px;
-      border: 1px solid var(--panel-border);
-      background: rgba(255,255,255,.10);
-      backdrop-filter: blur(12px);
-      box-shadow: 0 10px 26px rgba(0,0,0,.25);
+      border: 1px solid var(--glass-border);
+      background: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      box-shadow: var(--glass-shadow);
       cursor:pointer;
       display:grid;
       place-items:center;
@@ -129,7 +150,7 @@
 
     #nav-panel{
       position:absolute;
-      right: calc(var(--nav-size) + var(--nav-gap));
+      right: calc(var(--nav-size) + var(--nav-gap) + 17px); /* + hit padding */
       top: 50%;
       transform: translateY(-50%);
 
@@ -137,9 +158,10 @@
       height: var(--nav-open-h);
 
       border-radius: 18px;
-      border: 1px solid var(--panel-border);
-      background: var(--panel-bg);
+      border: 1px solid var(--glass-border);
+      background: rgba(255,255,255,.12);
       backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
       box-shadow: 0 12px 30px rgba(0,0,0,.25);
 
       opacity:0;
@@ -151,7 +173,7 @@
 
     #nav-panel .panel-inner{
       height:100%;
-      padding: 14px 14px;
+      padding: 14px;
       display:flex;
       flex-direction:column;
       gap: 10px;
@@ -193,7 +215,7 @@
       border-radius: 14px;
       padding: 10px 12px;
       color:#fff;
-      opacity:.88;
+      opacity:.90;
       border: 1px solid rgba(255,255,255,.0);
       background: rgba(255,255,255,.00);
       cursor:pointer;
@@ -229,6 +251,28 @@
       transform: scale(1.05);
     }
 
+    .nav-sep{
+      height:1px;
+      width:100%;
+      background: rgba(255,255,255,.18);
+      border:0;
+      margin: 6px 0;
+    }
+
+    .nav-item.logout{
+      background: rgba(255,255,255,.16);
+      border: 1px solid rgba(255,255,255,.12);
+      opacity: 1;
+    }
+    .nav-item.logout .dot{ background: rgba(255,255,255,.85); }
+
+    .nav-bottom{
+      margin-top:auto;
+      display:flex;
+      flex-direction:column;
+      gap: 6px;
+    }
+
     @media (hover:none){
       #nav-toggle:hover{ transform:none; }
     }
@@ -246,7 +290,6 @@
   <!-- Icon Navigation -->
   <nav id="icon-nav" aria-label="Navigation">
     <button id="nav-toggle" aria-expanded="false" aria-controls="nav-panel">
-      <!-- Inline SVG Icon -->
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
            xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <line x1="4" y1="7" x2="20" y2="7"
@@ -262,12 +305,28 @@
     <div id="nav-panel" role="menu" aria-label="Menü">
       <div class="panel-inner">
         <div class="nav-title">Navigation</div>
-        <ul class="nav-list">
+
+        <ul class="nav-list" aria-label="Hauptmenü">
           <li><button class="nav-item" role="menuitem" data-target="overview"><span class="dot"></span>Übersicht</button></li>
           <li><button class="nav-item" role="menuitem" data-target="turbines"><span class="dot"></span>Windenergieanlage</button></li>
           <li><button class="nav-item" role="menuitem" data-target="redispatch"><span class="dot"></span>Redispatch</button></li>
           <li><button class="nav-item" role="menuitem" data-target="documents"><span class="dot"></span>Dokumente</button></li>
+          <li><button class="nav-item" role="menuitem" data-target="account"><span class="dot"></span>Konto</button></li>
         </ul>
+
+        <hr class="nav-sep" />
+
+        <button class="nav-item logout" role="menuitem" id="btn-logout">
+          <span class="dot"></span>Abmelden
+        </button>
+
+        <hr class="nav-sep" />
+
+        <div class="nav-bottom" aria-label="Rechtliches">
+          <button class="nav-item" role="menuitem" id="btn-impressum">
+            <span class="dot"></span>Impressum &amp; Rechtliches
+          </button>
+        </div>
       </div>
     </div>
   </nav>
@@ -289,6 +348,15 @@
     <section id="documents" class="section" data-inner-scroll="true">
       <div class="inner-container" data-load="sections/documents/content.html"></div>
     </section>
+
+    <section id="account" class="section" data-inner-scroll="true">
+      <div class="inner-container">
+        <div class="content-surface">
+          <h2 style="margin:0 0 10px 0;">Konto</h2>
+          <p style="margin:0;">Hier kommen später Kontodaten / Einstellungen rein.</p>
+        </div>
+      </div>
+    </section>
   </main>
 
   <script>
@@ -297,7 +365,9 @@
       locked: false,
       sections: [],
       sectionIds: [],
-      video: { list: [], idx: 0, fadeMs: 1200, fadeLeadMs: 1200, active: "A" }
+      video: { list: [], idx: 0, fadeMs: 1200, fadeLeadMs: 1200, active: "A" },
+      hoverOpenTimer: null,
+      hoverCloseTimer: null
     };
 
     const el = {
@@ -306,6 +376,8 @@
       navToggle: document.getElementById("nav-toggle"),
       navPanel: document.getElementById("nav-panel"),
       navItems: Array.from(document.querySelectorAll(".nav-item[data-target]")),
+      btnLogout: document.getElementById("btn-logout"),
+      btnImpressum: document.getElementById("btn-impressum"),
       bgA: document.getElementById("bgA"),
       bgB: document.getElementById("bgB"),
     };
@@ -327,11 +399,20 @@
     }
 
     function setupNav(){
-      el.nav.addEventListener("mouseenter", () => {
-        if (matchMedia("(hover:hover)").matches) openNav(true);
+      // Hover is optional add-on. Click is primary.
+      el.nav.addEventListener("pointerenter", () => {
+        if (!matchMedia("(hover:hover)").matches) return;
+        clearTimeout(state.hoverCloseTimer);
+        state.hoverOpenTimer = setTimeout(() => openNav(true), 160);
       });
-      el.nav.addEventListener("mouseleave", () => {
-        if (matchMedia("(hover:hover)").matches) openNav(false);
+
+      el.nav.addEventListener("pointerleave", () => {
+        if (!matchMedia("(hover:hover)").matches) return;
+        clearTimeout(state.hoverOpenTimer);
+        state.hoverCloseTimer = setTimeout(() => {
+          // only close if not manually opened via click (still okay to close)
+          openNav(false);
+        }, 220);
       });
 
       el.navToggle.addEventListener("click", (e) => {
@@ -347,6 +428,18 @@
           if (i >= 0) goTo(i);
           openNav(false);
         });
+      });
+
+      el.btnLogout.addEventListener("click", () => {
+        // TODO: Logout-Logik hier einhängen
+        alert("Abmelden (Demo)");
+        openNav(false);
+      });
+
+      el.btnImpressum.addEventListener("click", () => {
+        // TODO: Impressum-Seite / Modal / Link
+        alert("Impressum & Rechtliches (Demo)");
+        openNav(false);
       });
 
       window.addEventListener("keydown", (e) => {
@@ -426,6 +519,11 @@
       for (const inner of inners){
         const url = inner.dataset.load;
         await loadHtmlInto(inner, url);
+
+        // Wrap loaded html into readable surface (keeps clean glass container)
+        if (inner.dataset.load && inner.innerHTML && !inner.querySelector(".content-surface")) {
+          inner.innerHTML = `<div class="content-surface">${inner.innerHTML}</div>`;
+        }
       }
     }
 
@@ -437,7 +535,7 @@
         container.innerHTML = html;
       }catch(err){
         container.innerHTML =
-          `<div style="padding:10px">
+          `<div class="content-surface">
             <strong>Fehler beim Laden:</strong><br>${escapeHtml(url)}
            </div>`;
         console.error(err);
