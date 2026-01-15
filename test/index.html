@@ -13,7 +13,7 @@
       --muted:#64748b;
       --grid:#eef2f6;
       --line:#22c55e;
-      --fill: rgba(34,197,94,.14);
+      --fill: rgba(34,197,94,.08);
       --marker:#cbd5e1;
       --valueBlue:#2563eb;
     }
@@ -42,7 +42,7 @@
   <div class="wrap">
     <div class="title">
       <div>
-        <h1>Day-Ahead Börsenpreis – aktueller Monat</h1>
+        <h1>Monatsmarktwert Wind Onshore – aktueller Monat (Schätzung)</h1>
         <div class="sub" id="subline">–</div>
       </div>
       <div class="sub" id="updated">–</div>
@@ -52,7 +52,8 @@
       <canvas id="chart"></canvas>
       <div class="err" id="err"></div>
       <div class="hint">
-        Hinweis: Schätzung aus Day-Ahead-Preisen + einfachem Rest-Estimator. Offiziell (Vormonat) wird später automatisch ersetzt, sobald verfügbar.
+        Hinweis: Schätzung = Spotmarktpreis (Netztransparenz) gewichtet mit Wind-Onshore-Erzeugung (SMARD).
+        Vormonat bleibt vorerst Schätzung und wird später automatisch ersetzt, sobald der offizielle Monatsmarktwert verfügbar ist.
       </div>
     </div>
   </div>
@@ -74,6 +75,7 @@
     if (v == null || !isFinite(v)) return "–";
     return `${v.toFixed(2)} €/MWh`;
   }
+
   function parseLabel(label){
     // "dd.mm HH:00"
     const m = label.match(/^(\d{2})\.(\d{2})\s+(\d{2}):00$/);
@@ -94,27 +96,42 @@
     c.height = Math.round(rect.height * dpr);
   }
 
+  function toDailySeries(series6h){
+    // Glättung: 1 Punkt pro Tag (Daily-Average)
+    const map = new Map(); // day -> {sum,n,dd}
+    for (const p of (series6h || [])) {
+      const t = parseLabel(p.label);
+      if(!t) continue;
+      const y = +p.value;
+      if(!isFinite(y)) continue;
+      const key = `${t.dd}.${t.mm}`;
+      const o = map.get(key) || {sum:0,n:0,dd:t.dd,mm:t.mm};
+      o.sum += y; o.n += 1;
+      map.set(key, o);
+    }
+    return [...map.values()]
+      .sort((a,b)=> (a.mm-b.mm) || (a.dd-b.dd))
+      .map(o => ({ x:(o.dd - 1) + 0.5, y:o.sum / o.n, dd:o.dd }));
+  }
+
   function draw(current, prev){
     resize();
     ctx.setTransform(1,0,0,1,0,0);
     ctx.clearRect(0,0,c.width,c.height);
 
-    // Layout: Plot links, Labelbereich rechts
+    // smoother, weniger "comic"
+    ctx.lineJoin = "round";
+    ctx.lineCap  = "round";
+
     const W = c.width, H = c.height;
     const padL = 18*dpr, padT = 14*dpr, padB = 22*dpr, padR = 18*dpr;
-    const labelZone = Math.round(220 * dpr); // rechter Bereich für Werte
+    const labelZone = Math.round(220 * dpr);
     const plotW = W - padL - padR - labelZone;
     const plotH = H - padT - padB;
     const plotX0 = padL;
     const plotY0 = padT;
 
-    const series = (current.series_6h || []).map(p => {
-      const t = parseLabel(p.label);
-      if(!t) return null;
-      // x in "Tage + 6h-Blöcke"
-      const x = (t.dd - 1) + (t.hh / 24);
-      return { x, y: +p.value };
-    }).filter(Boolean);
+    const series = toDailySeries(current.series_6h);
 
     if(series.length < 2){
       elErr.style.display = "block";
@@ -124,23 +141,21 @@
       elErr.style.display = "none";
     }
 
-    // X domain: kompletter Monat (0..daysInMonth)
     const [yy, mm] = (current.month || "").split("-").map(Number);
     const daysInMonth = new Date(yy, mm, 0).getDate();
     const xMin = 0;
     const xMax = daysInMonth;
 
-    // Y domain
     const ys = series.map(p => p.y);
     let yMin = Math.min(...ys);
     let yMax = Math.max(...ys);
-    const padY = (yMax - yMin) * 0.12 || 10;
+    const padY = (yMax - yMin) * 0.12 || 8;
     yMin -= padY; yMax += padY;
 
     const xToPx = x => plotX0 + (x - xMin) / (xMax - xMin) * plotW;
     const yToPx = y => plotY0 + (yMax - y) / (yMax - yMin) * plotH;
 
-    // Grid (leicht)
+    // Grid
     ctx.lineWidth = 1*dpr;
     ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--grid").trim();
     ctx.beginPath();
@@ -169,13 +184,11 @@
     ctx.lineWidth = 2*dpr;
     ctx.stroke();
 
-    // Marker: aktueller Tag (today_index) → Strich nach rechts
-    let idx = Math.min(Math.max(0, +current.today_index || (series.length-1)), series.length-1);
-    const pNow = series[idx];
-    const xNow = xToPx(pNow.x);
-    const yNow = yToPx(pNow.y);
+    // Marker: heutiger Tag (today_index) -> x = day + 0.5
+    const dayIndex = Math.min(Math.max(0, +current.today_index || (series.length-1)), daysInMonth-1);
+    const xNow = xToPx(dayIndex + 0.5);
 
-    // Vertikaler Marker im Plot
+    // Marker-Linie
     ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--marker").trim();
     ctx.lineWidth = 2*dpr;
     ctx.beginPath();
@@ -183,17 +196,22 @@
     ctx.lineTo(xNow, plotY0 + plotH);
     ctx.stroke();
 
-    // Horizontaler Strich in den Labelbereich
+    // value line in label zone
+    const estCur = current.estimate_eur_mwh;
+
+    const prevIsOfficial = !!prev.official_available && prev.official_eur_mwh != null;
+    const prevValue = prevIsOfficial ? prev.official_eur_mwh : prev.estimate_eur_mwh;
+
+    // y position for connector: use last known daily point <= today; fallback last
+    const pIdx = Math.min(series.length-1, Math.max(0, series.findIndex(p => p.dd === (dayIndex+1)) ));
+    const pNow = series[pIdx >= 0 ? pIdx : (series.length-1)];
+    const yNow = yToPx(pNow.y);
+
     const xRight = plotX0 + plotW + 14*dpr;
     ctx.beginPath();
     ctx.moveTo(xNow, yNow);
     ctx.lineTo(xRight + labelZone - 20*dpr, yNow);
     ctx.stroke();
-
-    // Werte rechts (oben: aktueller Monat Schätzung, unten: Vormonat Schätzung/official)
-    const estCur = current.estimate_eur_mwh;
-    const prevIsOfficial = !!prev.official_available && prev.official_eur_mwh != null;
-    const prevValue = prevIsOfficial ? prev.official_eur_mwh : prev.estimate_eur_mwh;
 
     const textX = xRight + 12*dpr;
     const topY  = Math.max(plotY0 + 16*dpr, Math.min(plotY0 + plotH - 40*dpr, yNow - 10*dpr));
@@ -202,7 +220,7 @@
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
 
-    // aktueller Wert (grün)
+    // aktuell (grün)
     ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--line").trim();
     ctx.font = `${18*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
     ctx.fillText(fmtEUR(estCur), textX, topY);
@@ -220,9 +238,10 @@
     ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
     ctx.fillText(prevIsOfficial ? "Vormonat (offiziell)" : "Vormonat (Schätzung)", textX, botY + 16*dpr);
 
-    // Achsen-Min/Max links unten klein (optional)
+    // x labels
     ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim();
     ctx.font = `${11*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+    ctx.textAlign = "left";
     ctx.fillText(`01`, plotX0, plotY0 + plotH + 16*dpr);
     ctx.textAlign = "right";
     ctx.fillText(`${daysInMonth}`, plotX0 + plotW, plotY0 + plotH + 16*dpr);
@@ -233,8 +252,10 @@
     try{
       const [current, prev] = await Promise.all([loadJson(PATH_CURRENT), loadJson(PATH_PREV)]);
 
-      // Header
-      elSub.textContent = `${current.month}-01 → ${current.month}-${String(new Date(+current.month.split("-")[0], +current.month.split("-")[1], 0).getDate()).padStart(2,"0")} (${current.bzn})`;
+      const [yy, mm] = (current.month || "").split("-").map(Number);
+      const dim = new Date(yy, mm, 0).getDate();
+
+      elSub.textContent = `${current.month}-01 → ${current.month}-${String(dim).padStart(2,"0")} (${current.bzn || "–"})`;
       elUpd.textContent = `Update: ${current.updated_utc || "–"}`;
 
       draw(current, prev);
