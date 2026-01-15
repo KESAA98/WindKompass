@@ -13,15 +13,21 @@
       --muted:#64748b;
       --grid:#eef2f6;
 
-      --line:#22c55e;
-      --fill: rgba(34,197,94,.08);
+      --spot:#94a3b8;     /* Spot (Day-Ahead) */
+      --spotFill: rgba(148,163,184,.06);
+
+      --est:#22c55e;      /* Schätzung (gewichtet) */
+      --estFill: rgba(34,197,94,.08);
 
       --marker:#cbd5e1;
       --valueBlue:#2563eb;
 
       --tooltipBg:#0f172a;
       --tooltipText:#ffffff;
+
+      --chartBg:#fbfdff;
     }
+
     body{
       margin:0; background:var(--bg); color:var(--text);
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
@@ -33,7 +39,6 @@
       border:1px solid var(--border);
       border-radius:14px;
       padding:14px;
-      position:relative;
     }
     .panelHead{
       display:flex;
@@ -45,10 +50,19 @@
     .panelHead h1{font-size:18px; margin:0; font-weight:700;}
     .sub{font-size:12px; color:var(--muted);}
 
+    /* eigener Chart-Container */
+    .chartCard{
+      border:1px solid var(--border);
+      background:var(--chartBg);
+      border-radius:12px;
+      padding:10px;
+    }
+
     .canvasWrap{
       position:relative;
-      border-radius:12px;
+      border-radius:10px;
       overflow:hidden;
+      background:#fff;
     }
     canvas{width:100%; height:360px; display:block;}
 
@@ -90,22 +104,23 @@
     <div class="panel">
       <div class="panelHead">
         <div>
-          <h1>Monatsmarktwert Wind Onshore – Schätzung</h1>
+          <h1>Monatsmarktwert Wind Onshore – Spot & Schätzung</h1>
           <div class="sub" id="subline">–</div>
         </div>
         <div class="sub" id="updated">–</div>
       </div>
 
-      <div class="canvasWrap" id="canvasWrap">
-        <canvas id="chart"></canvas>
-        <div class="tip" id="tip"></div>
+      <div class="chartCard">
+        <div class="canvasWrap" id="canvasWrap">
+          <canvas id="chart"></canvas>
+          <div class="tip" id="tip"></div>
+        </div>
       </div>
 
       <div class="err" id="err"></div>
 
       <div class="hint">
         Hinweis: Schätzung = Spotmarktpreis (Energy-Charts) gewichtet mit Wind-Onshore-Erzeugung (SMARD).
-        Vormonat bleibt vorerst Schätzung und wird später automatisch ersetzt, sobald der offizielle Monatsmarktwert verfügbar ist.
       </div>
     </div>
   </div>
@@ -125,7 +140,6 @@
   const c = document.getElementById("chart");
   const ctx = c.getContext("2d");
 
-  // DPR kann sich ändern (Browser-Zoom/Display wechseln) -> pro draw neu bestimmen
   const getDpr = () => Math.max(1, window.devicePixelRatio || 1);
 
   const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
@@ -135,18 +149,11 @@
     return `${MONTHS[m-1]} ${y}`;
   }
 
-  // €/MWh -> ct/kWh (1 €/MWh = 0.1 ct/kWh)
-  function eurMwhToCtKwh(v){
-    if (v == null || !isFinite(v)) return null;
-    return v * 0.1;
-  }
-  function fmtCtKwh(vCt){
-    if (vCt == null || !isFinite(vCt)) return "–";
-    return `${vCt.toFixed(2).replace(".", ",")} ct/kWh`;
-  }
+  // €/MWh -> ct/kWh
+  const eurMwhToCtKwh = (v) => (v == null || !isFinite(v) ? null : v * 0.1);
+  const fmtCtKwh = (vCt) => (vCt == null || !isFinite(vCt) ? "–" : `${vCt.toFixed(2).replace(".", ",")} ct/kWh`);
 
   function parseLabel(label){
-    // "dd.mm HH:00"
     const m = (label || "").match(/^(\d{2})\.(\d{2})\s+(\d{2}):00$/);
     if(!m) return null;
     return { dd:+m[1], mm:+m[2], hh:+m[3] };
@@ -165,10 +172,9 @@
     c.height = Math.round(rect.height * dpr);
   }
 
-  function to6hSeries(series6h){
-    // Ziel: 6h Punkte (statt Daily). X = fortlaufender Index in Tagen (dd-1) + hh/24
+  function to6hSeries(series){
     const out = [];
-    for (const p of (series6h || [])) {
+    for(const p of (series || [])){
       const t = parseLabel(p.label);
       if(!t) continue;
       const y = +p.value;
@@ -176,19 +182,17 @@
       out.push({
         x: (t.dd - 1) + (t.hh / 24),
         y,
-        dd: t.dd,
-        mm: t.mm,
-        hh: t.hh,
-        label: p.label
+        dd:t.dd, mm:t.mm, hh:t.hh,
+        label:p.label
       });
     }
-    out.sort((a,b)=> a.x - b.x);
+    out.sort((a,b)=>a.x-b.x);
     return out;
   }
 
-  function lastPoint(series6h){
-    const s = to6hSeries(series6h);
-    return s.length ? s[s.length - 1] : null;
+  function lastPoint(series){
+    const s = to6hSeries(series);
+    return s.length ? s[s.length-1] : null;
   }
 
   function roundRect(ctx, x, y, w, h, r){
@@ -201,7 +205,7 @@
     ctx.closePath();
   }
 
-  // Hover (nearest X + tolerance in px)
+  // Hover: nearest X + Toleranz
   let hoverBound = false;
   function bindHover(){
     if(hoverBound) return;
@@ -214,14 +218,12 @@
 
       const pts = window.__mw_points || [];
       const xPx = window.__mw_xpx || [];
-      if(!pts.length || !xPx.length){
+      if(!pts.length){
         tip.style.display = "none";
         return;
       }
 
-      // nearest X (nicht nearest point)
-      let bestIdx = -1;
-      let bestDist = Infinity;
+      let bestIdx = -1, bestDist = Infinity;
       for(let i=0;i<xPx.length;i++){
         const dist = Math.abs(xPx[i] - mx);
         if(dist < bestDist){ bestDist = dist; bestIdx = i; }
@@ -230,8 +232,13 @@
       const tol = 18 * dpr;
       if(bestIdx >= 0 && bestDist <= tol){
         const p = pts[bestIdx];
+
+        const head = `${String(p.dd).padStart(2,"0")}.${String(p.mm).padStart(2,"0")} ${String(p.hh).padStart(2,"0")}:00`;
+        const spot = (p.spotCt != null) ? `Spot: ${fmtCtKwh(p.spotCt)}` : `Spot: –`;
+        const est  = (p.estCt  != null) ? `Schätzung: ${fmtCtKwh(p.estCt)}` : `Schätzung: –`;
+
         tip.style.display = "block";
-        tip.textContent = `${String(p.dd).padStart(2,"0")}.${String(p.mm).padStart(2,"0")} ${String(p.hh).padStart(2,"0")}:00 – ${fmtCtKwh(p.valueCt)}`;
+        tip.textContent = `${head} – ${spot} – ${est}`;
         tip.style.left = `${(p.px / dpr)}px`;
         tip.style.top  = `${(p.py / dpr)}px`;
       }else{
@@ -239,9 +246,7 @@
       }
     });
 
-    wrap.addEventListener("mouseleave", () => {
-      tip.style.display = "none";
-    });
+    wrap.addEventListener("mouseleave", () => tip.style.display = "none");
   }
 
   function draw(current, prev){
@@ -258,47 +263,63 @@
     // Layout
     const padL = 18*dpr, padT = 14*dpr, padB = 30*dpr, padR = 18*dpr;
 
-    // Rechts: nur Textbereich (ohne Box)
-    const labelZone = Math.round(250 * dpr);
+    const labelZone = Math.round(260 * dpr);
     const gapToLabel = Math.round(16 * dpr);
 
     const plotW = W - padL - padR - labelZone - gapToLabel;
     const plotH = H - padT - padB;
     const plotX0 = padL;
     const plotY0 = padT;
+    const labelX0 = plotX0 + plotW + gapToLabel;
 
-    const labelX0 = plotX0 + plotW + gapToLabel; // start label zone
+    const css = getComputedStyle(document.documentElement);
+    const colGrid   = css.getPropertyValue("--grid").trim();
+    const colSpot   = css.getPropertyValue("--spot").trim();
+    const colSpotF  = css.getPropertyValue("--spotFill").trim();
+    const colEst    = css.getPropertyValue("--est").trim();
+    const colEstF   = css.getPropertyValue("--estFill").trim();
+    const colMarker = css.getPropertyValue("--marker").trim();
+    const colBorder = css.getPropertyValue("--border").trim();
+    const colMuted  = css.getPropertyValue("--muted").trim();
+    const colBlue   = css.getPropertyValue("--valueBlue").trim();
 
-    // 6h Serie (current)
-    let series = to6hSeries(current.series_6h);
+    // Daten: Spot (neu) + Schätzung (alt)
+    const spotSeriesRaw = current.series_6h_spot;     // <-- kommt aus Worker (neu)
+    const estSeriesRaw  = current.series_6h;          // <-- existiert bereits
 
-    // Startanker aus Vormonat
-    const prevLast = lastPoint(prev.series_6h);
-    if(prevLast && series.length){
-      // nur wenn zeitlich davor
-      if(prevLast.mm !== series[0].mm || prevLast.dd <= series[0].dd){
-        series = [{...prevLast, x:-0.25, label:"Vormonat"} , ...series];
-      }
-    }
+    let spot = to6hSeries(spotSeriesRaw);
+    let est  = to6hSeries(estSeriesRaw);
 
-    if(series.length < 2){
+    // Startanker für beide
+    const prevSpotLast = lastPoint(prev.series_6h_spot);
+    const prevEstLast  = lastPoint(prev.series_6h);
+
+    if(prevSpotLast && spot.length) spot = [{...prevSpotLast, x:-0.25, label:"Vormonat"} , ...spot];
+    if(prevEstLast  && est.length)  est  = [{...prevEstLast,  x:-0.25, label:"Vormonat"} , ...est];
+
+    // Mindestens eine Serie muss da sein
+    const hasSpot = spot.length >= 2;
+    const hasEst  = est.length >= 2;
+
+    if(!hasSpot && !hasEst){
       elErr.style.display = "block";
-      elErr.textContent = "Noch keine Daten vorhanden (series_6h leer).";
+      elErr.textContent = "Keine Daten: series_6h (Schätzung) und series_6h_spot (Spot) sind leer.";
       return;
-    } else {
-      elErr.style.display = "none";
     }
+    elErr.style.display = "none";
 
     const [yy, mm] = (current.month || "").split("-").map(Number);
     const daysInMonth = new Date(yy, mm, 0).getDate();
 
-    // x range: -0.5 .. (daysInMonth - 1) + 18/24
     const xMin = -0.5;
     const xMax = (daysInMonth - 1) + 18/24;
 
-    const ys = series.map(p => p.y);
-    let yMin = Math.min(...ys);
-    let yMax = Math.max(...ys);
+    // y-range über beide Serien
+    const yAll = []
+      .concat(hasSpot ? spot.map(p=>p.y) : [])
+      .concat(hasEst  ? est.map(p=>p.y)  : []);
+    let yMin = Math.min(...yAll);
+    let yMax = Math.max(...yAll);
     const padY = (yMax - yMin) * 0.12 || 8;
     yMin -= padY; yMax += padY;
 
@@ -307,7 +328,7 @@
 
     // Grid
     ctx.lineWidth = 1*dpr;
-    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--grid").trim();
+    ctx.strokeStyle = colGrid;
     ctx.beginPath();
     for(let i=0;i<=4;i++){
       const gy = plotY0 + (plotH/4)*i;
@@ -316,70 +337,99 @@
     }
     ctx.stroke();
 
-    // Area (nur im Plot clippen)
+    // Clip plot area
     ctx.save();
     ctx.beginPath();
     ctx.rect(plotX0, plotY0, plotW, plotH);
     ctx.clip();
 
-    ctx.beginPath();
-    ctx.moveTo(xToPx(series[0].x), yToPx(series[0].y));
-    for(const p of series) ctx.lineTo(xToPx(p.x), yToPx(p.y));
-    ctx.lineTo(xToPx(series[series.length-1].x), plotY0 + plotH);
-    ctx.lineTo(xToPx(series[0].x), plotY0 + plotH);
-    ctx.closePath();
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--fill").trim();
-    ctx.fill();
+    // Spot: Fläche + Linie (Hauptsächlich)
+    if(hasSpot){
+      ctx.beginPath();
+      ctx.moveTo(xToPx(spot[0].x), yToPx(spot[0].y));
+      for(const p of spot) ctx.lineTo(xToPx(p.x), yToPx(p.y));
+      ctx.lineTo(xToPx(spot[spot.length-1].x), plotY0 + plotH);
+      ctx.lineTo(xToPx(spot[0].x), plotY0 + plotH);
+      ctx.closePath();
+      ctx.fillStyle = colSpotF;
+      ctx.fill();
 
-    // Line
-    ctx.beginPath();
-    ctx.moveTo(xToPx(series[0].x), yToPx(series[0].y));
-    for(const p of series) ctx.lineTo(xToPx(p.x), yToPx(p.y));
-    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--line").trim();
-    ctx.lineWidth = 2*dpr;
-    ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(xToPx(spot[0].x), yToPx(spot[0].y));
+      for(const p of spot) ctx.lineTo(xToPx(p.x), yToPx(p.y));
+      ctx.strokeStyle = colSpot;
+      ctx.lineWidth = 2*dpr;
+      ctx.stroke();
+    }
+
+    // Schätzung: Linie (zweitrangig)
+    if(hasEst){
+      ctx.beginPath();
+      ctx.moveTo(xToPx(est[0].x), yToPx(est[0].y));
+      for(const p of est) ctx.lineTo(xToPx(p.x), yToPx(p.y));
+      ctx.strokeStyle = colEst;
+      ctx.lineWidth = 2*dpr;
+      ctx.stroke();
+    }
 
     ctx.restore();
 
-    // Marker: today_index (Tag) -> x = (day-1) + 12:00 (wir nehmen 12:00 als Marker)
+    // Marker (vertikal) im Plot
     const dayIndex = Math.min(Math.max(0, +current.today_index || 0), daysInMonth-1);
     const xNow = xToPx(dayIndex + 12/24);
 
-    // Marker-Linie NUR im Plot (clip)
     ctx.save();
     ctx.beginPath();
     ctx.rect(plotX0, plotY0, plotW, plotH);
     ctx.clip();
-
-    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--marker").trim();
+    ctx.strokeStyle = colMarker;
     ctx.lineWidth = 2*dpr;
     ctx.beginPath();
     ctx.moveTo(xNow, plotY0);
     ctx.lineTo(xNow, plotY0 + plotH);
     ctx.stroke();
-
     ctx.restore();
 
-    // yNow: nehme den letzten Punkt <= xNow (skip anchor label)
-    let pNow = null;
-    for(let i=series.length-1;i>=0;i--){
-      const p = series[i];
-      if(p.label === "Vormonat") continue;
-      if(xToPx(p.x) <= xNow + 0.0001){ pNow = p; break; }
+    // yNow: nimm Spot wenn vorhanden, sonst Schätzung
+    function lastBefore(series){
+      for(let i=series.length-1;i>=0;i--){
+        const p = series[i];
+        if(p.label === "Vormonat") continue;
+        if(xToPx(p.x) <= xNow + 0.0001) return p;
+      }
+      return series[series.length-1];
     }
-    if(!pNow) pNow = series[series.length-1];
-    const yNow = yToPx(pNow.y);
+    const pNowSpot = hasSpot ? lastBefore(spot) : null;
+    const pNowEst  = hasEst  ? lastBefore(est)  : null;
 
-    // Connector: endet VOR Textzone (nicht durch Schrift)
-    const stopX = labelX0 - (10 * dpr);
-    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--marker").trim();
-    ctx.lineWidth = 2*dpr;
+    const yNow = yToPx((pNowSpot?.y ?? pNowEst?.y));
+
+    // Connector (dünn, durchgehend bis kurz vor Text)
+    const stopX = labelX0 - (10*dpr);
+    ctx.strokeStyle = colMarker;
+    ctx.lineWidth = 1*dpr; /* dünner */
     ctx.beginPath();
     ctx.moveTo(xNow, yNow);
     ctx.lineTo(stopX, yNow);
     ctx.stroke();
 
-    // Rechte Werte: Monatsnamen + Trennlinie (kein Kasten)
+    // Linke “Überschrift” im Plot (Legende)
+    const legX = plotX0 + 10*dpr;
+    const legY = plotY0 + 18*dpr;
+
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
+    ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+
+    // Spot label
+    ctx.fillStyle = colSpot;
+    ctx.fillText(hasSpot ? "Spot (Day-Ahead)" : "Spot (Day-Ahead) – fehlt", legX, legY);
+
+    // Est label
+    ctx.fillStyle = colEst;
+    ctx.fillText(hasEst ? "Schätzung (gewichtet)" : "Schätzung – fehlt", legX, legY + 16*dpr);
+
+    // Rechte Werte: “Schätzung Marktpreis” + Monatswerte (mit Trennlinie)
     const curName = monthName(current.month);
     const prevName = monthName(prev.month);
 
@@ -387,75 +437,92 @@
     const prevIsOfficial = !!prev.official_available && prev.official_eur_mwh != null;
     const prevValCt = eurMwhToCtKwh(prevIsOfficial ? prev.official_eur_mwh : prev.estimate_eur_mwh);
 
-    // Textblock positioniert um yNow (aber innerhalb Plot-Höhe)
-    const blockPadTop = 6*dpr;
-    const line1 = 22*dpr; // value
-    const line2 = 16*dpr; // month
-    const gap   = 8*dpr;
-    const sepH  = 1*dpr;
+    // Optional Spot-Monatsmittel (wenn Worker liefert)
+    const spotCurCt = eurMwhToCtKwh(current.estimate_spot_eur_mwh);
+    const spotPrevCt = eurMwhToCtKwh(prev.estimate_spot_eur_mwh);
 
-    const blockH = (line1 + line2) + gap + sepH + gap + (line1 + line2);
+    const blockH = (18+12) * dpr + 10*dpr + 1*dpr + 10*dpr + (16+12)*dpr + 16*dpr;
     const blockY = Math.max(plotY0 + 6*dpr, Math.min(plotY0 + plotH - blockH - 6*dpr, yNow - blockH/2));
     const xText = labelX0;
 
-    // Current value
-    ctx.textAlign = "left";
-    ctx.textBaseline = "alphabetic";
-
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--line").trim();
-    ctx.font = `${18*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
-    ctx.fillText(fmtCtKwh(estCurCt), xText, blockY + blockPadTop + 18*dpr);
-
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim();
+    // Title rechts
+    ctx.fillStyle = colMuted;
     ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
-    ctx.fillText(curName, xText, blockY + blockPadTop + 36*dpr);
+    ctx.fillText("Schätzung Marktpreis", xText, blockY + 14*dpr);
 
-    // Separator line between values
-    const sepY = blockY + blockPadTop + 36*dpr + gap;
-    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--border").trim();
+    // Current
+    ctx.fillStyle = colEst;
+    ctx.font = `${18*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+    ctx.fillText(fmtCtKwh(estCurCt), xText, blockY + 38*dpr);
+
+    ctx.fillStyle = colMuted;
+    ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+    ctx.fillText(curName, xText, blockY + 54*dpr);
+
+    // Separator
+    const sepY = blockY + 68*dpr;
+    ctx.strokeStyle = colBorder;
     ctx.lineWidth = 1*dpr;
     ctx.beginPath();
     ctx.moveTo(xText, sepY);
     ctx.lineTo(xText + (labelZone - 20*dpr), sepY);
     ctx.stroke();
 
-    // Prev value
-    const yPrev1 = sepY + gap + 18*dpr;
-    const yPrev2 = sepY + gap + 36*dpr;
-
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--valueBlue").trim();
+    // Prev
+    ctx.fillStyle = colBlue;
     ctx.font = `${16*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
-    ctx.fillText(fmtCtKwh(prevValCt), xText, yPrev1);
+    ctx.fillText(fmtCtKwh(prevValCt), xText, sepY + 28*dpr);
 
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim();
+    ctx.fillStyle = colMuted;
     ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
-    ctx.fillText(prevIsOfficial ? `${prevName} (offiziell)` : prevName, xText, yPrev2);
+    ctx.fillText(prevIsOfficial ? `${prevName} (offiziell)` : prevName, xText, sepY + 44*dpr);
 
-    // X-Achsenmarker (1,8,15,22,last)
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim();
+    // Optional: Spot-Monatsmittel klein darunter (nur wenn vorhanden)
+    if(spotCurCt != null || spotPrevCt != null){
+      ctx.fillStyle = colSpot;
+      ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+      ctx.fillText(
+        `Spot (Monat): ${spotCurCt != null ? fmtCtKwh(spotCurCt) : "–"}`,
+        xText, sepY + 62*dpr
+      );
+    }
+
+    // X-Achse Marks
+    ctx.fillStyle = colMuted;
     ctx.font = `${11*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
     ctx.textAlign = "center";
-
     const marks = [1, 8, 15, 22, daysInMonth].filter((v,i,a)=>a.indexOf(v)===i);
     for(const d of marks){
       const x = xToPx((d-1) + 12/24);
       ctx.fillText(String(d).padStart(2,"0"), x, plotY0 + plotH + 18*dpr);
     }
 
-    // Hover caches (nearest X)
-    const pts = series
-      .filter(p => p.label !== "Vormonat")
-      .map(p => ({
+    // Hover cache: wir nehmen die X-Positionen der Spot-Serie, sonst Schätzung
+    // und mappen auf beide Werte per nearest label (dd/mm/hh)
+    function keyOf(p){ return `${p.dd}-${p.mm}-${p.hh}`; }
+    const estMap = new Map((hasEst ? est : []).filter(p=>p.label!=="Vormonat").map(p=>[keyOf(p), p]));
+    const spotBase = (hasSpot ? spot : est).filter(p=>p.label!=="Vormonat");
+
+    const pts = spotBase.map(p => {
+      const k = keyOf(p);
+      const e = estMap.get(k);
+      const s = hasSpot ? p : null;
+
+      const spotY = s ? s.y : null;
+      const estY  = e ? e.y : null;
+
+      const py = yToPx((spotY ?? estY));
+      return {
         px: xToPx(p.x),
-        py: yToPx(p.y),
-        dd: p.dd,
-        mm: p.mm,
-        hh: p.hh,
-        valueCt: eurMwhToCtKwh(p.y),
-      }));
+        py,
+        dd:p.dd, mm:p.mm, hh:p.hh,
+        spotCt: spotY != null ? eurMwhToCtKwh(spotY) : null,
+        estCt:  estY  != null ? eurMwhToCtKwh(estY)  : null,
+      };
+    });
 
     window.__mw_points = pts;
-    window.__mw_xpx = pts.map(p => p.px);
+    window.__mw_xpx = pts.map(p=>p.px);
     bindHover();
   }
 
@@ -466,13 +533,11 @@
       const [yy, mm] = (current.month || "").split("-").map(Number);
       const dim = new Date(yy, mm, 0).getDate();
 
-      elSub.textContent = `${current.month}-01 → ${current.month}-${String(dim).padStart(2,"0")} (${current.bzn || "–"})`;
+      elSub.textContent = `${current.month}-01 → ${current.month}-${String(dim).padStart(2,"0")}`;
       elUpd.textContent = `Update: ${current.updated_utc || "–"}`;
 
       draw(current, prev);
-
       window.addEventListener("resize", () => draw(current, prev));
-      // optional: wenn devicePixelRatio sich ohne resize ändert (Zoom), dann bei focus redraw
       window.addEventListener("focus", () => draw(current, prev));
     } catch(e){
       elErr.style.display = "block";
