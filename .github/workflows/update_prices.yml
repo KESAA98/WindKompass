@@ -11,8 +11,9 @@ permissions:
 jobs:
   update:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup Python
@@ -20,10 +21,7 @@ jobs:
         with:
           python-version: "3.x"
 
-      - name: Run updater
-        env:
-          NT_CLIENT_ID: ${{ secrets.NT_CLIENT_ID }}
-          NT_CLIENT_SECRET: ${{ secrets.NT_CLIENT_SECRET }}
+      - name: Run price updater
         run: |
           python scripts/update_prices.py
 
