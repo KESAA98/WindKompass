@@ -10,11 +10,11 @@
 # - data/price_current_month.json
 # - data/price_prev_month.json
 #
-# JSON bleibt kompatibel zum bisherigen Frontend:
+# JSON bleibt kompatibel zum Frontend:
 # - estimate_eur_mwh
 # - series_6h[].label + series_6h[].value  (€/MWh)
 # - today_index
-# - prev: official_* Felder bleiben vorhanden (immer false/null)
+# - official_* Felder als Platzhalter (immer false/null)
 
 import json
 import urllib.request
@@ -52,7 +52,7 @@ def http_get(url: str, headers: Optional[Dict[str, str]] = None, timeout: int = 
 
 
 def fetch_json(url: str) -> Any:
-    raw = http_get(url, timeout=60)
+    raw = http_get(url, timeout=90)
     return json.loads(raw.decode("utf-8"))
 
 
@@ -76,7 +76,7 @@ def prev_month(year: int, month: int) -> Tuple[int, int]:
 def safe_float(x: Any) -> Optional[float]:
     try:
         v = float(x)
-        if v != v:  # NaN
+        if v != v:
             return None
         return v
     except Exception:
@@ -85,12 +85,10 @@ def safe_float(x: Any) -> Optional[float]:
 
 # ---------- Energy-Charts price (hourly, €/MWh) ----------
 
-def fetch_energy_charts_prices_eur_mwh_by_hour_utc(month_start_local: datetime, month_end_local: datetime) -> Dict[datetime, float]:
-    """
-    Energy-Charts:
-      https://api.energy-charts.info/price?bzn=DE-LU&start=YYYY-MM-DD&end=YYYY-MM-DD
-    returns: unix_seconds (UTC epoch seconds), price (EUR/MWh), hourly.
-    """
+def fetch_energy_charts_prices_eur_mwh_by_hour_utc(
+    month_start_local: datetime,
+    month_end_local: datetime
+) -> Dict[datetime, float]:
     url = (
         "https://api.energy-charts.info/price"
         f"?bzn={BZN}&start={iso(month_start_local.date())}&end={iso(month_end_local.date())}"
@@ -111,9 +109,7 @@ def fetch_energy_charts_prices_eur_mwh_by_hour_utc(month_start_local: datetime, 
         if pv is None:
             continue
 
-        dt_utc = datetime.fromtimestamp(uu, tz=timezone.utc)
-        # normalize to hour start
-        dt_utc = dt_utc.replace(minute=0, second=0, microsecond=0)
+        dt_utc = datetime.fromtimestamp(uu, tz=timezone.utc).replace(minute=0, second=0, microsecond=0)
         out[dt_utc] = pv
 
     return out
@@ -126,11 +122,14 @@ def smard_get_index_timestamps_ms() -> List[int]:
     j = fetch_json(url)
     if not isinstance(j, list):
         return []
-    return [int(x) for x in j if isinstance(x, (int, float))]
+    return sorted(int(x) for x in j if isinstance(x, (int, float)))
 
 
 def smard_fetch_timeseries_from_timestamp_ms(ts_ms: int) -> List[Tuple[int, Optional[float]]]:
-    url = f"{SMARD_BASE}/{SMARD_FILTER_WIND_ONSHORE}/{SMARD_REGION}/{SMARD_FILTER_WIND_ONSHORE}_{SMARD_REGION}_{SMARD_RESOLUTION}_{ts_ms}.json"
+    url = (
+        f"{SMARD_BASE}/{SMARD_FILTER_WIND_ONSHORE}/{SMARD_REGION}/"
+        f"{SMARD_FILTER_WIND_ONSHORE}_{SMARD_REGION}_{SMARD_RESOLUTION}_{ts_ms}.json"
+    )
     j = fetch_json(url)
     series = j.get("series") if isinstance(j, dict) else None
     if not isinstance(series, list):
@@ -143,39 +142,59 @@ def smard_fetch_timeseries_from_timestamp_ms(ts_ms: int) -> List[Tuple[int, Opti
             t_ms = int(item[0])
         except Exception:
             continue
-        v = safe_float(item[1])
-        out.append((t_ms, v))
+        out.append((t_ms, safe_float(item[1])))
     return out
 
 
 def smard_wind_onshore_energy_mwh_by_hour_utc(start_utc: datetime, end_utc: datetime) -> Dict[datetime, float]:
     """
-    SMARD quarterhour MW -> Energie je Viertelstunde = MW * 0.25 (MWh)
-    Aggregiert zu hour_start_utc -> MWh
+    Robust:
+    - SMARD hat mehrere Chunk-Files (Index).
+    - Wir laden: (Chunk direkt vor start) + (alle Chunks im Zeitraum) + (notfalls der letzte <= end).
     """
     idx = smard_get_index_timestamps_ms()
     if not idx:
         return {}
 
     start_ms = int(start_utc.timestamp() * 1000)
-    candidates = [t for t in idx if t <= start_ms]
-    ts0 = max(candidates) if candidates else min(idx)
+    end_ms = int(end_utc.timestamp() * 1000)
 
-    series = smard_fetch_timeseries_from_timestamp_ms(ts0)
-    if not series:
-        return {}
+    # Chunks, die potentiell Daten enthalten
+    in_range = [t for t in idx if start_ms <= t <= end_ms]
+    prev = max((t for t in idx if t < start_ms), default=None)
+    last_le_end = max((t for t in idx if t <= end_ms), default=None)
 
+    ts_list: List[int] = []
+    if prev is not None:
+        ts_list.append(prev)
+    ts_list.extend(in_range)
+
+    # falls nichts im range, zumindest last <= end
+    if not ts_list and last_le_end is not None:
+        ts_list = [last_le_end]
+
+    # unique, sort
+    ts_list = sorted(set(ts_list))
+
+    # alle Serien zusammenführen
+    # SMARD quarterhour MW -> Energie = MW * 0.25 MWh je Viertelstunde, dann stündlich aggregieren
     out: Dict[datetime, float] = {}
-    for t_ms, mw in series:
-        if mw is None:
-            continue
-        dt_utc = datetime.fromtimestamp(t_ms / 1000.0, tz=timezone.utc)
-        if dt_utc < start_utc or dt_utc >= end_utc:
+
+    for ts0 in ts_list:
+        series = smard_fetch_timeseries_from_timestamp_ms(ts0)
+        if not series:
             continue
 
-        e_mwh = mw * 0.25
-        hour_start = dt_utc.replace(minute=0, second=0, microsecond=0)
-        out[hour_start] = out.get(hour_start, 0.0) + e_mwh
+        for t_ms, mw in series:
+            if mw is None:
+                continue
+            if t_ms < start_ms or t_ms >= end_ms:
+                continue
+
+            dt_utc = datetime.fromtimestamp(t_ms / 1000.0, tz=timezone.utc)
+            e_mwh = mw * 0.25
+            hour_start = dt_utc.replace(minute=0, second=0, microsecond=0)
+            out[hour_start] = out.get(hour_start, 0.0) + e_mwh
 
     return out
 
@@ -218,7 +237,6 @@ def group_weighted_to_6h_berlin(
     month_end_local: datetime,
     cut_after_local: Optional[datetime] = None,
 ) -> List[Bucket]:
-    # key=(Y,M,D,block) -> (sum(price*energy), sum(energy), rep_dt_local)
     buckets: Dict[Tuple[int, int, int, int], Tuple[float, float, datetime]] = {}
 
     for hour_utc, price in price_by_hour_utc.items():
@@ -245,23 +263,13 @@ def group_weighted_to_6h_berlin(
         hh = block * 6
         label = f"{d:02d}.{m:02d} {hh:02d}:00"
         day_key = f"{d:02d}.{m:02d}"
-        out.append(Bucket(
-            ts=int(rep.timestamp()),
-            label=label,
-            value=wsum / esum,
-            day_key=day_key
-        ))
+        out.append(Bucket(ts=int(rep.timestamp()), label=label, value=wsum / esum, day_key=day_key))
 
     out.sort(key=lambda x: x.ts)
     return out
 
 
 def build_month_payload(year: int, month: int, mode: str) -> Dict[str, Any]:
-    """
-    mode:
-      - "current": bis jetzt (Berlin)
-      - "prev": kompletter Vormonat
-    """
     month_start_local, month_end_local = month_start_end_local(year, month)
 
     start_utc = month_start_local.astimezone(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
@@ -274,7 +282,6 @@ def build_month_payload(year: int, month: int, mode: str) -> Dict[str, Any]:
     if mode == "current":
         end_utc = min(end_utc_full, now_local.astimezone(timezone.utc))
 
-    # fetch data
     price_by_hour = fetch_energy_charts_prices_eur_mwh_by_hour_utc(month_start_local, month_end_local)
     energy_by_hour = smard_wind_onshore_energy_mwh_by_hour_utc(start_utc, end_utc)
 
@@ -296,17 +303,14 @@ def build_month_payload(year: int, month: int, mode: str) -> Dict[str, Any]:
         "bzn": "MW Wind Onshore",
         "tz": "Europe/Berlin",
         "month": f"{year:04d}-{month:02d}",
-
         "range": {
             "start_local": month_start_local.isoformat(),
             "end_local": month_end_local.isoformat(),
             "cut_after_local": now_local.isoformat() if mode == "current" else None,
         },
-
-        # estimate (EUR/MWh)
         "estimate_eur_mwh": round(est, 2) if est is not None else None,
 
-        # placeholders (damit HTML unverändert bleiben kann)
+        # placeholders
         "official_eur_mwh": None,
         "official_available": False,
         "official_checked_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
@@ -331,14 +335,8 @@ def main() -> None:
     current = build_month_payload(y, m, mode="current")
     prev = build_month_payload(py, pm, mode="prev")
 
-    (OUT_DIR / "price_current_month.json").write_text(
-        json.dumps(current, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    (OUT_DIR / "price_prev_month.json").write_text(
-        json.dumps(prev, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+    (OUT_DIR / "price_current_month.json").write_text(json.dumps(current, ensure_ascii=False, indent=2), encoding="utf-8")
+    (OUT_DIR / "price_prev_month.json").write_text(json.dumps(prev, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 if __name__ == "__main__":
