@@ -120,9 +120,16 @@ def fetch_energy_charts_prices_eur_mwh_by_hour_utc(
 def smard_get_index_timestamps_ms() -> List[int]:
     url = f"{SMARD_BASE}/{SMARD_FILTER_WIND_ONSHORE}/{SMARD_REGION}/index_{SMARD_RESOLUTION}.json"
     j = fetch_json(url)
-    if not isinstance(j, list):
+
+    # SMARD liefert oft: {"timestamps":[...]}
+    if isinstance(j, dict) and isinstance(j.get("timestamps"), list):
+        arr = j["timestamps"]
+    elif isinstance(j, list):
+        arr = j
+    else:
         return []
-    return sorted(int(x) for x in j if isinstance(x, (int, float)))
+
+    return sorted(int(x) for x in arr if isinstance(x, (int, float)))
 
 
 def smard_fetch_timeseries_from_timestamp_ms(ts_ms: int) -> List[Tuple[int, Optional[float]]]:
