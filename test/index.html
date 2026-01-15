@@ -11,7 +11,7 @@
       --border:#e9eef3;
       --text:#0f172a;
       --muted:#6b7280;
-      --grid:#eef2f6;
+      --grid:#f3f5f8;
 
       --spot:#6b7280;               /* Spot (Day-Ahead) */
       --est:#16a34a;                /* Marktwert (Schätzung) */
@@ -31,7 +31,6 @@
 
     .wrap{max-width:1120px; margin:28px auto; padding:0 16px;}
 
-    /* EIN cleanes Panel, keine Schatten */
     .panel{
       background:var(--card);
       border:1px solid var(--border);
@@ -65,7 +64,6 @@
       min-height: 420px;
     }
 
-    /* LINKS: Chart ohne extra Box */
     .left{
       padding:16px 18px 14px 18px;
       position:relative;
@@ -93,19 +91,25 @@
     }
     canvas{width:100%; height:360px; display:block;}
 
-    /* RECHTS: ruhige Info-Spalte, keine Karten */
+    /* RECHTS: mittig & clean */
     .right{
-      padding:18px 18px 18px 18px;
+      padding:18px;
       border-left:1px solid var(--border);
       display:flex;
       flex-direction:column;
+      justify-content:center;    /* vertikal zentriert */
+      align-items:center;        /* horizontal zentriert */
       gap:18px;
+      text-align:center;
     }
 
     .kpi{
+      width:100%;
+      max-width:320px;
       display:flex;
       flex-direction:column;
       gap:6px;
+      align-items:center;
     }
     .kpiLabel{
       font-size:12px;
@@ -114,7 +118,7 @@
     }
     .kpiValue{
       font-size:26px;
-      font-weight:600;   /* nicht fett */
+      font-weight:600;
       line-height:1.1;
     }
     .kpiSub{
@@ -124,6 +128,7 @@
 
     .divider{
       height:1px;
+      width:70%;
       background:var(--border);
       margin:2px 0;
     }
@@ -134,7 +139,6 @@
       color:var(--text);
     }
 
-    /* Tooltip */
     .tip{
       position:absolute;
       pointer-events:none;
@@ -145,7 +149,7 @@
       border-radius:10px;
       font-size:12px;
       white-space:nowrap;
-      box-shadow:0 10px 26px rgba(0,0,0,.18); /* neutral */
+      box-shadow:0 10px 26px rgba(0,0,0,.18);
       display:none;
       z-index:5;
     }
@@ -172,7 +176,9 @@
 
     @media (max-width: 920px){
       .body{grid-template-columns:1fr;}
-      .right{border-left:none; border-top:1px solid var(--border);}
+      .right{border-left:none; border-top:1px solid var(--border); align-items:stretch; text-align:left;}
+      .kpi{align-items:flex-start;}
+      .divider{width:100%;}
       canvas{height:320px;}
     }
   </style>
@@ -313,6 +319,27 @@
     elErr.textContent = "";
   }
 
+  // ---- Smooth line (Catmull-Rom -> Bezier) ----
+  function smoothPath(points){
+    if(points.length < 2) return;
+    ctx.beginPath();
+    ctx.moveTo(points[0].px, points[0].py);
+
+    for(let i=0;i<points.length-1;i++){
+      const p0 = points[i-1] || points[i];
+      const p1 = points[i];
+      const p2 = points[i+1];
+      const p3 = points[i+2] || p2;
+
+      const c1x = p1.px + (p2.px - p0.px) / 6;
+      const c1y = p1.py + (p2.py - p0.py) / 6;
+      const c2x = p2.px - (p3.px - p1.px) / 6;
+      const c2y = p2.py - (p3.py - p1.py) / 6;
+
+      ctx.bezierCurveTo(c1x,c1y,c2x,c2y,p2.px,p2.py);
+    }
+  }
+
   function draw(current, prev){
     resize();
     ctx.setTransform(1,0,0,1,0,0);
@@ -362,13 +389,13 @@
       .concat(hasEst  ? est.map(p=>p.y)  : []);
     let yMin = Math.min(...yAll);
     let yMax = Math.max(...yAll);
-    const padY = (yMax - yMin) * 0.12 || 8;
+    const padY = (yMax - yMin) * 0.14 || 8;
     yMin -= padY; yMax += padY;
 
     const xToPx = x => plotX0 + (x - xMin) / (xMax - xMin) * plotW;
     const yToPx = y => plotY0 + (yMax - y) / (yMax - yMin) * plotH;
 
-    // Grid
+    // Grid (zarter)
     ctx.lineWidth = 1*k;
     ctx.strokeStyle = colGrid;
     ctx.beginPath();
@@ -385,35 +412,35 @@
     ctx.rect(plotX0, plotY0, plotW, plotH);
     ctx.clip();
 
-    // Fill Schätzung
+    // Build px points
+    const estPx = hasEst ? est.map(p=>({ ...p, px:xToPx(p.x), py:yToPx(p.y) })) : [];
+    const spotPx= hasSpot? spot.map(p=>({ ...p, px:xToPx(p.x), py:yToPx(p.y) })) : [];
+
+    // Fill Schätzung (smooth)
     if(hasEst){
-      ctx.beginPath();
-      ctx.moveTo(xToPx(est[0].x), yToPx(est[0].y));
-      for(const p of est) ctx.lineTo(xToPx(p.x), yToPx(p.y));
-      ctx.lineTo(xToPx(est[est.length-1].x), plotY0 + plotH);
-      ctx.lineTo(xToPx(est[0].x), plotY0 + plotH);
+      smoothPath(estPx);
+      ctx.lineTo(estPx[estPx.length-1].px, plotY0 + plotH);
+      ctx.lineTo(estPx[0].px, plotY0 + plotH);
       ctx.closePath();
       ctx.fillStyle = colFill;
       ctx.fill();
     }
 
-    // Spot line
+    // Spot line (dünner & transparenter)
     if(hasSpot){
-      ctx.beginPath();
-      ctx.moveTo(xToPx(spot[0].x), yToPx(spot[0].y));
-      for(const p of spot) ctx.lineTo(xToPx(p.x), yToPx(p.y));
+      smoothPath(spotPx);
       ctx.strokeStyle = colSpot;
-      ctx.lineWidth = 2*k;
+      ctx.globalAlpha = 0.7;
+      ctx.lineWidth = 1.6*k;
       ctx.stroke();
+      ctx.globalAlpha = 1;
     }
 
-    // Est line
+    // Est line (leicht dicker)
     if(hasEst){
-      ctx.beginPath();
-      ctx.moveTo(xToPx(est[0].x), yToPx(est[0].y));
-      for(const p of est) ctx.lineTo(xToPx(p.x), yToPx(p.y));
+      smoothPath(estPx);
       ctx.strokeStyle = colEst;
-      ctx.lineWidth = 2*k;
+      ctx.lineWidth = 2.0*k;
       ctx.stroke();
     }
 
