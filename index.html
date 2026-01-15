@@ -5,35 +5,275 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>WES WindKompass</title>
 
-  <link rel="stylesheet" href="assets/styles/main.css" />
-</head>
-<body>
+  <style>
+    :root{
+      --pad: 22px;
+      --inner-max: 1100px;
 
-  <!-- Background Video Layer (2 videos for crossfade) -->
+      --inner-bg: rgba(255,255,255,0.82);
+      --inner-text: #0f172a;
+
+      --bg-overlay: rgba(0,0,0,.42);
+
+      --nav-size: 60px;
+      --nav-open-w: 280px;
+      --nav-open-h: 230px;
+      --nav-gap: 10px;
+      --nav-right: 26px;
+
+      --panel-bg: rgba(255,255,255,0.10);
+      --panel-border: rgba(255,255,255,0.18);
+
+      --snap-ms: 520ms;
+      --fade-ms: 1200ms;
+
+      --shadow: 0 14px 40px rgba(0,0,0,.28);
+    }
+
+    *{ box-sizing:border-box; }
+    html, body{ height:100%; margin:0; }
+    body{
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      overflow:hidden;
+      background:#000;
+    }
+
+    .sr-only{
+      position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+      overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+    }
+
+    /* VIDEO BG */
+    #video-bg{
+      position:fixed; inset:0; z-index:-10; overflow:hidden;
+    }
+    #video-bg video{
+      position:absolute; inset:0;
+      width:100%; height:100%;
+      object-fit:cover;
+      opacity:0;
+      transition: opacity var(--fade-ms) ease;
+    }
+    #video-bg video.is-visible{ opacity:1; }
+    #video-bg .bg-overlay{
+      position:absolute; inset:0;
+      background: var(--bg-overlay);
+    }
+
+    /* SECTIONS STACK */
+    #sections{
+      position:fixed; inset:0;
+      transform: translateY(0);
+      transition: transform var(--snap-ms) cubic-bezier(.2,.9,.2,1);
+      will-change: transform;
+    }
+    .section{
+      height:100vh;
+      padding: var(--pad);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .inner-container{
+      width: min(var(--inner-max), 100%);
+      max-height: calc(100vh - (var(--pad) * 2));
+      background: var(--inner-bg);
+      color: var(--inner-text);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+      border: 1px solid rgba(15,23,42,.08);
+      overflow:hidden;
+    }
+    .section[data-inner-scroll="true"] .inner-container{
+      overflow:auto;
+      -webkit-overflow-scrolling: touch;
+      padding-right: 10px;
+    }
+
+    /* NAV */
+    #icon-nav{
+      position:fixed;
+      right: var(--nav-right);
+      top: 50%;
+      transform: translateY(-50%);
+      z-index:50;
+
+      width: var(--nav-size);
+      height: var(--nav-size);
+
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
+    }
+
+    #nav-toggle{
+      width: var(--nav-size);
+      height: var(--nav-size);
+      border-radius: 999px;
+      border: 1px solid var(--panel-border);
+      background: rgba(255,255,255,.10);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 10px 26px rgba(0,0,0,.25);
+      cursor:pointer;
+      display:grid;
+      place-items:center;
+      transition: transform 180ms ease, background 180ms ease;
+      position:relative;
+      z-index:2;
+      padding:0;
+    }
+    #nav-toggle:hover{ transform: scale(1.05); background: rgba(255,255,255,.14); }
+    #nav-toggle:focus{ outline:2px solid rgba(255,255,255,.35); outline-offset:3px; }
+    #nav-toggle svg{ display:block; }
+
+    #nav-panel{
+      position:absolute;
+      right: calc(var(--nav-size) + var(--nav-gap));
+      top: 50%;
+      transform: translateY(-50%);
+
+      width: var(--nav-open-w);
+      height: var(--nav-open-h);
+
+      border-radius: 18px;
+      border: 1px solid var(--panel-border);
+      background: var(--panel-bg);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 12px 30px rgba(0,0,0,.25);
+
+      opacity:0;
+      pointer-events:none;
+
+      transition: opacity 180ms ease, transform 220ms ease;
+      transform-origin: right center;
+    }
+
+    #nav-panel .panel-inner{
+      height:100%;
+      padding: 14px 14px;
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+
+      opacity:0;
+      transform: translateX(6px);
+      transition: opacity 180ms ease 60ms, transform 220ms ease 60ms;
+    }
+
+    #icon-nav.is-open #nav-panel{
+      opacity:1;
+      pointer-events:auto;
+      transform: translateY(-50%) translateX(0);
+    }
+    #icon-nav.is-open #nav-panel .panel-inner{
+      opacity:1;
+      transform: translateX(0);
+    }
+
+    .nav-title{
+      color:#fff;
+      opacity:.82;
+      font-size: 12px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      margin: 2px 0 2px 2px;
+    }
+
+    .nav-list{
+      display:flex;
+      flex-direction:column;
+      gap: 6px;
+      margin:0;
+      padding:0;
+      list-style:none;
+    }
+
+    .nav-item{
+      border-radius: 14px;
+      padding: 10px 12px;
+      color:#fff;
+      opacity:.88;
+      border: 1px solid rgba(255,255,255,.0);
+      background: rgba(255,255,255,.00);
+      cursor:pointer;
+      text-align:left;
+
+      display:flex;
+      align-items:center;
+      gap:10px;
+
+      transition: background 160ms ease, transform 160ms ease, opacity 160ms ease;
+    }
+
+    .nav-item .dot{
+      width:8px; height:8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.35);
+      flex: 0 0 auto;
+      transition: background 160ms ease, transform 160ms ease;
+    }
+
+    .nav-item:hover{
+      background: rgba(255,255,255,.10);
+      transform: translateX(-2px);
+      opacity: 1;
+    }
+
+    .nav-item.active{
+      background: rgba(255,255,255,.14);
+      opacity: 1;
+    }
+    .nav-item.active .dot{
+      background: rgba(255,255,255,.85);
+      transform: scale(1.05);
+    }
+
+    @media (hover:none){
+      #nav-toggle:hover{ transform:none; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Background Video (2 layers for crossfade) -->
   <div id="video-bg" aria-hidden="true">
     <video id="bgA" autoplay muted playsinline preload="auto"></video>
     <video id="bgB" autoplay muted playsinline preload="auto"></video>
     <div class="bg-overlay"></div>
   </div>
 
-  <!-- Icon Navigation (expands on hover / tap) -->
+  <!-- Icon Navigation -->
   <nav id="icon-nav" aria-label="Navigation">
-    <button id="nav-toggle" class="nav-circle" aria-expanded="false" aria-controls="nav-menu">
-      <img src="assets/icons/nav_main.svg" alt="" />
+    <button id="nav-toggle" aria-expanded="false" aria-controls="nav-panel">
+      <!-- Inline SVG Icon -->
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+           xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <line x1="4" y1="7" x2="20" y2="7"
+              stroke="rgba(255,255,255,0.85)" stroke-width="2" stroke-linecap="round"/>
+        <line x1="4" y1="12" x2="20" y2="12"
+              stroke="rgba(255,255,255,0.85)" stroke-width="2" stroke-linecap="round"/>
+        <line x1="4" y1="17" x2="20" y2="17"
+              stroke="rgba(255,255,255,0.85)" stroke-width="2" stroke-linecap="round"/>
+      </svg>
       <span class="sr-only">Navigation öffnen</span>
     </button>
 
-    <div id="nav-menu" class="nav-menu" role="menu">
-      <button role="menuitem" data-target="overview">Übersicht</button>
-      <button role="menuitem" data-target="turbines">Windenergieanlage</button>
-      <button role="menuitem" data-target="redispatch">Redispatch</button>
-      <button role="menuitem" data-target="documents">Dokumente</button>
+    <div id="nav-panel" role="menu" aria-label="Menü">
+      <div class="panel-inner">
+        <div class="nav-title">Navigation</div>
+        <ul class="nav-list">
+          <li><button class="nav-item" role="menuitem" data-target="overview"><span class="dot"></span>Übersicht</button></li>
+          <li><button class="nav-item" role="menuitem" data-target="turbines"><span class="dot"></span>Windenergieanlage</button></li>
+          <li><button class="nav-item" role="menuitem" data-target="redispatch"><span class="dot"></span>Redispatch</button></li>
+          <li><button class="nav-item" role="menuitem" data-target="documents"><span class="dot"></span>Dokumente</button></li>
+        </ul>
+      </div>
     </div>
   </nav>
 
-  <!-- Sections Stack -->
-  <main id="sections" class="sections">
-
+  <!-- Sections -->
+  <main id="sections">
     <section id="overview" class="section" data-inner-scroll="false">
       <div class="inner-container" data-load="sections/overview/content.html"></div>
     </section>
@@ -49,9 +289,244 @@
     <section id="documents" class="section" data-inner-scroll="true">
       <div class="inner-container" data-load="sections/documents/content.html"></div>
     </section>
-
   </main>
 
-  <script src="js/app.js"></script>
+  <script>
+    const state = {
+      index: 0,
+      locked: false,
+      sections: [],
+      sectionIds: [],
+      video: { list: [], idx: 0, fadeMs: 1200, fadeLeadMs: 1200, active: "A" }
+    };
+
+    const el = {
+      stack: document.getElementById("sections"),
+      nav: document.getElementById("icon-nav"),
+      navToggle: document.getElementById("nav-toggle"),
+      navPanel: document.getElementById("nav-panel"),
+      navItems: Array.from(document.querySelectorAll(".nav-item[data-target]")),
+      bgA: document.getElementById("bgA"),
+      bgB: document.getElementById("bgB"),
+    };
+
+    init().catch(console.error);
+
+    async function init(){
+      state.sections = Array.from(document.querySelectorAll(".section"));
+      state.sectionIds = state.sections.map(s => s.id);
+
+      setupNav();
+      setupScrollSnap();
+
+      await loadAllSections();
+      await setupVideoPlaylist();
+
+      goTo(0, false);
+      setActiveNav();
+    }
+
+    function setupNav(){
+      el.nav.addEventListener("mouseenter", () => {
+        if (matchMedia("(hover:hover)").matches) openNav(true);
+      });
+      el.nav.addEventListener("mouseleave", () => {
+        if (matchMedia("(hover:hover)").matches) openNav(false);
+      });
+
+      el.navToggle.addEventListener("click", (e) => {
+        e.preventDefault();
+        const isOpen = el.nav.classList.contains("is-open");
+        openNav(!isOpen);
+      });
+
+      el.navItems.forEach(btn => {
+        btn.addEventListener("click", () => {
+          const target = btn.dataset.target;
+          const i = state.sectionIds.indexOf(target);
+          if (i >= 0) goTo(i);
+          openNav(false);
+        });
+      });
+
+      window.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") openNav(false);
+      });
+
+      window.addEventListener("click", (e) => {
+        if (!el.nav.classList.contains("is-open")) return;
+        const path = e.composedPath ? e.composedPath() : [];
+        const clickedInside = path.includes(el.nav);
+        if (!clickedInside) openNav(false);
+      });
+    }
+
+    function openNav(open){
+      el.nav.classList.toggle("is-open", !!open);
+      el.navToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    }
+
+    function setActiveNav(){
+      const activeId = state.sectionIds[state.index];
+      el.navItems.forEach(b => b.classList.toggle("active", b.dataset.target === activeId));
+    }
+
+    function setupScrollSnap(){
+      window.addEventListener("wheel", onWheel, { passive:false });
+      window.addEventListener("resize", () => goTo(state.index, false));
+    }
+
+    function onWheel(e){
+      const inner = findInnerScrollable(e);
+      if (inner && canInnerConsume(inner, e.deltaY)) return;
+
+      e.preventDefault();
+      if (state.locked) return;
+
+      state.locked = true;
+      const dir = Math.sign(e.deltaY);
+      if (dir > 0) goTo(state.index + 1);
+      if (dir < 0) goTo(state.index - 1);
+
+      setTimeout(() => (state.locked = false), 520);
+    }
+
+    function findInnerScrollable(e){
+      const path = e.composedPath ? e.composedPath() : [];
+      return path.find(n =>
+        n && n.classList && n.classList.contains("inner-container") &&
+        n.scrollHeight > n.clientHeight
+      );
+    }
+
+    function canInnerConsume(inner, deltaY){
+      const atTop = inner.scrollTop <= 0;
+      const atBottom = inner.scrollTop + inner.clientHeight >= inner.scrollHeight - 1;
+      if (deltaY > 0 && !atBottom) return true;
+      if (deltaY < 0 && !atTop) return true;
+      return false;
+    }
+
+    function goTo(i, animate=true){
+      const max = state.sections.length - 1;
+      const next = Math.max(0, Math.min(max, i));
+      state.index = next;
+
+      if (!animate) el.stack.style.transition = "none";
+      el.stack.style.transform = `translateY(${-next * window.innerHeight}px)`;
+      if (!animate) {
+        void el.stack.offsetHeight;
+        el.stack.style.transition = "";
+      }
+      setActiveNav();
+    }
+
+    async function loadAllSections(){
+      const inners = Array.from(document.querySelectorAll(".inner-container[data-load]"));
+      for (const inner of inners){
+        const url = inner.dataset.load;
+        await loadHtmlInto(inner, url);
+      }
+    }
+
+    async function loadHtmlInto(container, url){
+      try{
+        const res = await fetch(url, { cache: "no-cache" });
+        if(!res.ok) throw new Error(`Fetch failed ${res.status} for ${url}`);
+        const html = await res.text();
+        container.innerHTML = html;
+      }catch(err){
+        container.innerHTML =
+          `<div style="padding:10px">
+            <strong>Fehler beim Laden:</strong><br>${escapeHtml(url)}
+           </div>`;
+        console.error(err);
+      }
+    }
+
+    function escapeHtml(str){
+      return String(str).replace(/[&<>"']/g, s => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+      }[s]));
+    }
+
+    async function setupVideoPlaylist(){
+      try{
+        const res = await fetch("assets/videos/manifest.json", { cache:"no-cache" });
+        if(!res.ok) throw new Error("No videos manifest");
+        const json = await res.json();
+
+        state.video.fadeMs = typeof json.fadeMs === "number" ? json.fadeMs : state.video.fadeMs;
+        state.video.fadeLeadMs = typeof json.fadeLeadMs === "number" ? json.fadeLeadMs : state.video.fadeLeadMs;
+        state.video.list = (json.videos || []).map(v => v.startsWith("http") ? v : `assets/videos/${v}`);
+        if(state.video.list.length === 0) throw new Error("Empty video list");
+
+        document.documentElement.style.setProperty("--fade-ms", `${state.video.fadeMs}ms`);
+
+        await setVideoSource(el.bgA, state.video.list[0]);
+        el.bgA.classList.add("is-visible");
+        el.bgB.classList.remove("is-visible");
+        state.video.active = "A";
+
+        attachFadeScheduler(el.bgA);
+      }catch(err){
+        console.warn("Video playlist disabled:", err);
+      }
+    }
+
+    function attachFadeScheduler(videoEl){
+      const onReady = () => scheduleFade(videoEl);
+      videoEl.addEventListener("loadedmetadata", onReady, { once:true });
+
+      if (videoEl.duration && isFinite(videoEl.duration)) scheduleFade(videoEl);
+      videoEl.addEventListener("ended", () => scheduleFade(videoEl));
+    }
+
+    function scheduleFade(currentEl){
+      const dur = currentEl.duration;
+      if(!dur || !isFinite(dur)) return;
+
+      const lead = state.video.fadeLeadMs / 1000;
+      const t = Math.max(0, dur - lead);
+
+      if (currentEl._fadeTimer) clearTimeout(currentEl._fadeTimer);
+      currentEl._fadeTimer = setTimeout(() => crossfadeToNext(), t * 1000);
+    }
+
+    async function crossfadeToNext(){
+      if(state.video.list.length < 2) return;
+
+      state.video.idx = (state.video.idx + 1) % state.video.list.length;
+      const nextSrc = state.video.list[state.video.idx];
+
+      const from = state.video.active === "A" ? el.bgA : el.bgB;
+      const to   = state.video.active === "A" ? el.bgB : el.bgA;
+
+      await setVideoSource(to, nextSrc);
+
+      to.classList.add("is-visible");
+      from.classList.remove("is-visible");
+
+      state.video.active = (state.video.active === "A") ? "B" : "A";
+      attachFadeScheduler(to);
+    }
+
+    async function setVideoSource(videoEl, src){
+      return new Promise((resolve) => {
+        try { videoEl.pause(); } catch {}
+        videoEl.removeAttribute("src");
+        videoEl.load();
+
+        videoEl.src = src;
+
+        const onCanPlay = async () => {
+          try { await videoEl.play(); } catch {}
+          resolve();
+        };
+        videoEl.addEventListener("canplay", onCanPlay, { once:true });
+        videoEl.load();
+      });
+    }
+  </script>
 </body>
 </html>
