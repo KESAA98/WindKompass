@@ -6,18 +6,16 @@
   <title>Monatsmarktwert Wind Onshore</title>
   <style>
     :root{
-      --bg:#f6f8fb;
+      --bg:#ffffff;
       --card:#ffffff;
-      --border:#e7edf3;
+      --border:#e9eef3;
       --text:#0f172a;
-      --muted:#64748b;
-      --grid:#eef3f7;
+      --muted:#6b7280;
+      --grid:#eef2f6;
 
-      --spot:#6b7280;          /* Spot (Day-Ahead) */
-      --est:#22c55e;           /* Marktwert (Schätzung) */
-      --estFill:rgba(34,197,94,.12);
-
-      --sideBg:#fafcff;
+      --spot:#6b7280;               /* Spot (Day-Ahead) */
+      --est:#16a34a;                /* Marktwert (Schätzung) */
+      --estFill:rgba(22,163,74,.08);
 
       --tipBg:#0f172a;
       --tipText:#ffffff;
@@ -30,106 +28,113 @@
       color:var(--text);
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     }
+
     .wrap{max-width:1120px; margin:28px auto; padding:0 16px;}
 
-    /* EIN Container */
-    .card{
+    /* EIN cleanes Panel, keine Schatten */
+    .panel{
       background:var(--card);
       border:1px solid var(--border);
-      border-radius:18px;
-      box-shadow:0 10px 28px rgba(15,23,42,.06);
+      border-radius:16px;
       overflow:hidden;
     }
 
     .head{
-      padding:18px 18px 12px 18px;
+      padding:18px 18px 14px 18px;
       display:flex;
+      align-items:flex-end;
       justify-content:space-between;
-      align-items:flex-start;
       gap:16px;
     }
     .title{
       margin:0;
       font-size:18px;
-      font-weight:720;
+      font-weight:650;
       letter-spacing:.2px;
     }
-    .subtitle{
-      margin-top:4px;
+    .sub{
+      margin-top:6px;
       font-size:12px;
       color:var(--muted);
     }
 
-    .content{
+    .body{
       display:grid;
-      grid-template-columns: 1.6fr 0.9fr;
-      gap:0;
+      grid-template-columns: 1.65fr 0.85fr;
       border-top:1px solid var(--border);
+      min-height: 420px;
     }
 
-    /* LINKS: Chart */
-    .chartArea{
-      padding:14px 14px 10px 14px;
-    }
-    .chartBox{
+    /* LINKS: Chart ohne extra Box */
+    .left{
+      padding:16px 18px 14px 18px;
       position:relative;
-      border:1px solid var(--border);
-      border-radius:14px;
-      background:linear-gradient(180deg,#fbfdff,#ffffff);
+    }
+    .chartTop{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:10px;
+    }
+    .legend{
+      display:flex;
+      gap:14px;
+      align-items:center;
+      color:var(--muted);
+      font-size:12px;
+      user-select:none;
+    }
+    .dot{width:9px; height:9px; border-radius:999px; display:inline-block; margin-right:8px; transform:translateY(1px);}
+    .canvasWrap{
+      position:relative;
+      border-radius:12px;
       overflow:hidden;
     }
     canvas{width:100%; height:360px; display:block;}
 
-    /* RECHTS: Info */
-    .side{
-      background:var(--sideBg);
+    /* RECHTS: ruhige Info-Spalte, keine Karten */
+    .right{
+      padding:18px 18px 18px 18px;
       border-left:1px solid var(--border);
-      padding:16px 16px 14px 16px;
       display:flex;
       flex-direction:column;
-      gap:14px;
-      min-height: 100%;
+      gap:18px;
     }
-    .kpiTitle{
+
+    .kpi{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    .kpiLabel{
       font-size:12px;
       color:var(--muted);
       letter-spacing:.2px;
     }
     .kpiValue{
-      font-size:28px;
-      font-weight:720;
-      line-height:1.05;
-      margin-top:4px;
+      font-size:26px;
+      font-weight:600;   /* nicht fett */
+      line-height:1.1;
     }
-    .kpiLabel{
+    .kpiSub{
       font-size:12px;
       color:var(--muted);
-      margin-top:4px;
     }
-    .kpiBlock{padding:10px 10px; border:1px solid var(--border); border-radius:14px; background:#fff;}
-    .row{
-      display:flex; gap:10px; align-items:baseline; justify-content:space-between;
+
+    .divider{
+      height:1px;
+      background:var(--border);
+      margin:2px 0;
     }
-    .delta{
+
+    .deltaLine{
       font-size:13px;
-      font-weight:650;
-    }
-    .deltaSub{
-      font-size:12px;
-      color:var(--muted);
-      margin-top:2px;
+      font-weight:600;
+      color:var(--text);
     }
 
-    .legend{
-      display:flex;
-      gap:14px;
-      align-items:center;
-      padding:10px 18px 14px 18px;
-      color:var(--muted);
-      font-size:12px;
-    }
-    .dot{width:9px; height:9px; border-radius:999px; display:inline-block; margin-right:8px; transform:translateY(1px);}
-
+    /* Tooltip */
     .tip{
       position:absolute;
       pointer-events:none;
@@ -140,7 +145,7 @@
       border-radius:10px;
       font-size:12px;
       white-space:nowrap;
-      box-shadow:0 10px 26px rgba(0,0,0,.18);
+      box-shadow:0 10px 26px rgba(0,0,0,.18); /* neutral */
       display:none;
       z-index:5;
     }
@@ -166,60 +171,60 @@
     }
 
     @media (max-width: 920px){
-      .content{grid-template-columns: 1fr;}
-      .side{border-left:none; border-top:1px solid var(--border);}
+      .body{grid-template-columns:1fr;}
+      .right{border-left:none; border-top:1px solid var(--border);}
       canvas{height:320px;}
     }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="card">
+    <div class="panel">
       <div class="head">
         <div>
           <h1 class="title">Monatsmarktwert Wind Onshore</h1>
-          <div class="subtitle" id="subline">–</div>
+          <div class="sub" id="subline">–</div>
         </div>
       </div>
 
-      <div class="content">
-        <!-- LINKS -->
-        <div class="chartArea">
-          <div class="chartBox" id="chartBox">
+      <div class="body">
+        <section class="left">
+          <div class="chartTop">
+            <div class="legend">
+              <span><span class="dot" style="background:var(--spot)"></span>Spot (Day-Ahead)</span>
+              <span><span class="dot" style="background:var(--est)"></span>Marktwert (Schätzung)</span>
+            </div>
+          </div>
+
+          <div class="canvasWrap" id="canvasWrap">
             <canvas id="chart"></canvas>
             <div class="tip" id="tip"></div>
           </div>
-        </div>
+        </section>
 
-        <!-- RECHTS -->
-        <aside class="side" aria-label="Monatswerte">
-          <div class="kpiBlock">
-            <div class="kpiTitle">Spot (Monat)</div>
+        <aside class="right" aria-label="Monatswerte">
+          <div class="kpi">
+            <div class="kpiLabel">Spot (Monat)</div>
             <div class="kpiValue" id="kpiSpot" style="color:var(--spot)">–</div>
-            <div class="kpiLabel" id="kpiSpotSub">–</div>
+            <div class="kpiSub" id="kpiSpotSub">–</div>
           </div>
 
-          <div class="kpiBlock">
-            <div class="kpiTitle">Marktwert (Schätzung)</div>
+          <div class="divider"></div>
+
+          <div class="kpi">
+            <div class="kpiLabel">Marktwert (Schätzung)</div>
             <div class="kpiValue" id="kpiEst" style="color:var(--est)">–</div>
-            <div class="kpiLabel" id="kpiEstSub">–</div>
+            <div class="kpiSub" id="kpiEstSub">–</div>
           </div>
 
-          <div class="kpiBlock">
-            <div class="row">
-              <div>
-                <div class="kpiTitle">Vergleich</div>
-                <div class="delta" id="kpiDelta">–</div>
-                <div class="deltaSub" id="kpiPrev">–</div>
-              </div>
-            </div>
+          <div class="divider"></div>
+
+          <div class="kpi">
+            <div class="kpiLabel">Vergleich</div>
+            <div class="deltaLine" id="kpiDelta">–</div>
+            <div class="kpiSub" id="kpiPrev">–</div>
           </div>
         </aside>
-      </div>
-
-      <div class="legend">
-        <span><span class="dot" style="background:var(--spot)"></span>Spot (Day-Ahead)</span>
-        <span><span class="dot" style="background:var(--est)"></span>Marktwert (Schätzung)</span>
       </div>
 
       <div class="err" id="err"></div>
@@ -241,7 +246,7 @@
   const elKpiDelta = document.getElementById("kpiDelta");
   const elKpiPrev  = document.getElementById("kpiPrev");
 
-  const box = document.getElementById("chartBox");
+  const wrap = document.getElementById("canvasWrap");
   const tip = document.getElementById("tip");
   const c = document.getElementById("chart");
   const ctx = c.getContext("2d");
@@ -303,7 +308,6 @@
     elErr.style.display = "block";
     elErr.textContent = msg;
   }
-
   function clearError(){
     elErr.style.display = "none";
     elErr.textContent = "";
@@ -322,8 +326,9 @@
     const colSpot = css.getPropertyValue("--spot").trim();
     const colEst  = css.getPropertyValue("--est").trim();
     const colFill = css.getPropertyValue("--estFill").trim();
+    const colMuted = css.getPropertyValue("--muted").trim();
 
-    const padL = 18*k, padR = 14*k, padT = 12*k, padB = 30*k;
+    const padL = 12*k, padR = 10*k, padT = 10*k, padB = 26*k;
     const plotX0 = padL, plotY0 = padT;
     const plotW = W - padL - padR;
     const plotH = H - padT - padB;
@@ -374,7 +379,7 @@
     }
     ctx.stroke();
 
-    // Clip
+    // Clip plot
     ctx.save();
     ctx.beginPath();
     ctx.rect(plotX0, plotY0, plotW, plotH);
@@ -392,7 +397,7 @@
       ctx.fill();
     }
 
-    // Spot line (primary)
+    // Spot line
     if(hasSpot){
       ctx.beginPath();
       ctx.moveTo(xToPx(spot[0].x), yToPx(spot[0].y));
@@ -414,8 +419,8 @@
 
     ctx.restore();
 
-    // X markers
-    ctx.fillStyle = css.getPropertyValue("--muted").trim();
+    // X marks
+    ctx.fillStyle = colMuted;
     ctx.font = `${11*k}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
     ctx.textAlign="center";
     const marks = [1,8,15,22,dim].filter((v,i,a)=>a.indexOf(v)===i);
@@ -424,7 +429,7 @@
       ctx.fillText(String(d).padStart(2,"0"), x, plotY0 + plotH + 18*k);
     }
 
-    // Hover points: nearest X, show both
+    // Hover: nearest X, show both series
     const estMap = new Map(est.filter(p=>p.label!=="Vormonat").map(p=>[`${p.dd}-${p.mm}-${p.hh}`, p]));
     const base = (hasSpot ? spot : est).filter(p=>p.label!=="Vormonat");
 
@@ -444,8 +449,6 @@
 
     window.__mw_pts = pts;
     window.__mw_xs  = pts.map(p=>p.px);
-
-    bindHover();
   }
 
   let hoverBound = false;
@@ -453,9 +456,9 @@
     if(hoverBound) return;
     hoverBound = true;
 
-    box.addEventListener("mousemove", (ev) => {
+    wrap.addEventListener("mousemove", (ev) => {
       const k = dpr();
-      const rect = box.getBoundingClientRect();
+      const rect = wrap.getBoundingClientRect();
       const mx = (ev.clientX - rect.left) * k;
 
       const pts = window.__mw_pts || [];
@@ -474,7 +477,7 @@
         const head = `${String(p.dd).padStart(2,"0")}.${String(p.mm).padStart(2,"0")} ${String(p.hh).padStart(2,"0")}:00`;
         const a = `Spot: ${fmtCt(p.spotCt)}`;
         const b = `Marktwert: ${fmtCt(p.estCt)}`;
-        tip.textContent = `${head} – ${a} – ${b}`;
+        tip.textContent = `${head} · ${a} · ${b}`;
         tip.style.display="block";
         tip.style.left = `${(p.px / k)}px`;
         tip.style.top  = `${(p.py / k)}px`;
@@ -483,17 +486,15 @@
       }
     });
 
-    box.addEventListener("mouseleave", ()=> tip.style.display="none");
+    wrap.addEventListener("mouseleave", ()=> tip.style.display="none");
   }
 
   async function init(){
     try{
       const [current, prev] = await Promise.all([loadJson(PATH_CURRENT), loadJson(PATH_PREV)]);
 
-      // Header (nur nutzer-relevant)
       elSub.textContent = monthLabel(current.month);
 
-      // KPI Werte
       const spotCt = eurMwhToCtKwh(current.estimate_spot_eur_mwh);
       const estCt  = eurMwhToCtKwh(current.estimate_eur_mwh);
 
@@ -502,23 +503,23 @@
       );
 
       elKpiSpot.textContent = fmtCt(spotCt);
-      elKpiSpotSub.textContent = `${monthLabel(current.month)} – Spot`;
+      elKpiSpotSub.textContent = `${monthLabel(current.month)}`;
 
       elKpiEst.textContent = fmtCt(estCt);
-      elKpiEstSub.textContent = `${monthLabel(current.month)} – Schätzung`;
+      elKpiEstSub.textContent = `${monthLabel(current.month)}`;
 
-      // Delta (Schätzung vs Vormonat-Schätzung)
       if(estCt != null && prevEstCt != null){
         const d = estCt - prevEstCt;
         const arrow = d > 0 ? "↑" : (d < 0 ? "↓" : "→");
         elKpiDelta.textContent = `${arrow} ${fmtCt(Math.abs(d))} zum Vormonat`;
-        elKpiPrev.textContent  = `Vormonat: ${fmtCt(prevEstCt)} (${monthLabel(prev.month)})`;
+        elKpiPrev.textContent  = `Vormonat: ${fmtCt(prevEstCt)} · ${monthLabel(prev.month)}`;
       } else {
         elKpiDelta.textContent = "–";
-        elKpiPrev.textContent  = `Vormonat: ${fmtCt(prevEstCt)} (${monthLabel(prev.month)})`;
+        elKpiPrev.textContent  = `Vormonat: ${fmtCt(prevEstCt)} · ${monthLabel(prev.month)}`;
       }
 
       draw(current, prev);
+      bindHover();
       window.addEventListener("resize", () => draw(current, prev));
     } catch(e){
       setError("Fehler beim Laden der Daten.");
