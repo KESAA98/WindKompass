@@ -2,19 +2,23 @@
 # scripts/update_prices.py
 #
 # Ohne Netztransparenz (keine Secrets / kein OAuth).
-# Schätzung MW Wind Onshore (gewichtet) aus:
+# Monatsmarktwert Wind Onshore (Schätzung, gewichtet) aus:
 #   - Energy-Charts Day-Ahead Preis (€/MWh, stündlich)
 #   - SMARD Wind Onshore Erzeugung (MW, 15-min) -> Energie (MWh)
+#
+# Zusätzlich: Spot (Day-Ahead) als eigene 6h-Serie (ungewichtet)
 #
 # Erstellt:
 # - data/price_current_month.json
 # - data/price_prev_month.json
 #
-# JSON bleibt kompatibel zum Frontend:
-# - estimate_eur_mwh
-# - series_6h[].label + series_6h[].value  (€/MWh)
+# JSON Felder (kompatibel + erweitert):
+# - estimate_eur_mwh                       (gewichtet, €/MWh)
+# - series_6h[].label + .value             (gewichtet, €/MWh)
+# - estimate_spot_eur_mwh                  (Spot-Monatsmittel, €/MWh)  [neu]
+# - series_6h_spot[].label + .value        (Spot 6h, €/MWh)            [neu]
 # - today_index
-# - official_* Felder als Platzhalter (immer false/null)
+# - official_* placeholders
 
 import json
 import urllib.request
@@ -116,6 +120,23 @@ def fetch_energy_charts_prices_eur_mwh_by_hour_utc(
     return out
 
 
+def spot_month_average_eur_mwh(
+    price_by_hour_utc: Dict[datetime, float],
+    start_utc: datetime,
+    end_utc: datetime,
+) -> Optional[float]:
+    vals: List[float] = []
+    for h, price in price_by_hour_utc.items():
+        if h < start_utc or h >= end_utc:
+            continue
+        if price is None or not (price == price):
+            continue
+        vals.append(float(price))
+    if not vals:
+        return None
+    return sum(vals) / len(vals)
+
+
 # ---------- SMARD wind onshore (15-min MW) -> hourly MWh ----------
 
 def smard_get_index_timestamps_ms() -> List[int]:
@@ -130,17 +151,12 @@ def smard_get_index_timestamps_ms() -> List[int]:
 
     ts: List[int] = []
 
-    # Variante A: {"timestamps": {"0-99":[...], ...}}
     if isinstance(j, dict) and isinstance(j.get("timestamps"), dict):
         for v in j["timestamps"].values():
             if isinstance(v, list):
                 ts.extend(v)
-
-    # Variante B: {"timestamps":[...]}
     elif isinstance(j, dict) and isinstance(j.get("timestamps"), list):
         ts = j["timestamps"]
-
-    # Variante C: direkt [...]
     elif isinstance(j, list):
         ts = j
 
@@ -171,10 +187,7 @@ def smard_fetch_timeseries_from_timestamp_ms(ts_ms: int) -> List[Tuple[int, Opti
 
 def smard_wind_onshore_energy_mwh_by_hour_utc(start_utc: datetime, end_utc: datetime) -> Dict[datetime, float]:
     """
-    Robust:
-    - SMARD hat mehrere Chunk-Files (Index).
-    - Wir laden: (Chunk direkt vor start) + (alle Chunks im Zeitraum) + (notfalls der letzte <= end).
-    - Viertelstunde MW -> MWh pro Viertelstunde: MW * 0.25, dann stündlich aggregieren.
+    Viertelstunde MW -> MWh pro Viertelstunde: MW * 0.25, dann stündlich aggregieren.
     """
     idx = smard_get_index_timestamps_ms()
     if not idx:
@@ -219,7 +232,7 @@ def smard_wind_onshore_energy_mwh_by_hour_utc(start_utc: datetime, end_utc: date
     return out
 
 
-# ---------- Weighted aggregation + 6h buckets (Berlin) ----------
+# ---------- Aggregation + 6h buckets (Berlin) ----------
 
 @dataclass
 class Bucket:
@@ -289,6 +302,43 @@ def group_weighted_to_6h_berlin(
     return out
 
 
+def group_spot_to_6h_berlin(
+    price_by_hour_utc: Dict[datetime, float],
+    month_start_local: datetime,
+    month_end_local: datetime,
+    cut_after_local: Optional[datetime] = None,
+) -> List[Bucket]:
+    """
+    Spot 6h (ungewichtet): Mittelwert der Stundenpreise je 6h-Block (Berlin-Zeit).
+    """
+    buckets: Dict[Tuple[int, int, int, int], Tuple[float, int, datetime]] = {}
+
+    for hour_utc, price in price_by_hour_utc.items():
+        dt_loc = hour_utc.astimezone(TZ)
+        if dt_loc < month_start_local or dt_loc > month_end_local:
+            continue
+        if cut_after_local is not None and dt_loc > cut_after_local:
+            continue
+
+        block = dt_loc.hour // 6
+        key = (dt_loc.year, dt_loc.month, dt_loc.day, block)
+
+        s, n, rep = buckets.get(key, (0.0, 0, dt_loc))
+        buckets[key] = (s + float(price), n + 1, rep)
+
+    out: List[Bucket] = []
+    for (y, m, d, block), (s, n, rep) in buckets.items():
+        if n <= 0:
+            continue
+        hh = block * 6
+        label = f"{d:02d}.{m:02d} {hh:02d}:00"
+        day_key = f"{d:02d}.{m:02d}"
+        out.append(Bucket(ts=int(rep.timestamp()), label=label, value=s / n, day_key=day_key))
+
+    out.sort(key=lambda x: x.ts)
+    return out
+
+
 def build_month_payload(year: int, month: int, mode: str) -> Dict[str, Any]:
     month_start_local, month_end_local = month_start_end_local(year, month)
 
@@ -307,9 +357,10 @@ def build_month_payload(year: int, month: int, mode: str) -> Dict[str, Any]:
     price_by_hour = fetch_energy_charts_prices_eur_mwh_by_hour_utc(month_start_local, month_end_local)
     energy_by_hour = smard_wind_onshore_energy_mwh_by_hour_utc(start_utc, end_utc)
 
-    est = weighted_month_estimate_eur_mwh(price_by_hour, energy_by_hour, start_utc, end_utc)
+    est_weighted = weighted_month_estimate_eur_mwh(price_by_hour, energy_by_hour, start_utc, end_utc)
+    est_spot = spot_month_average_eur_mwh(price_by_hour, start_utc, end_utc)
 
-    buckets = group_weighted_to_6h_berlin(
+    buckets_weighted = group_weighted_to_6h_berlin(
         price_by_hour_utc=price_by_hour,
         energy_mwh_by_hour_utc=energy_by_hour,
         month_start_local=month_start_local,
@@ -317,8 +368,18 @@ def build_month_payload(year: int, month: int, mode: str) -> Dict[str, Any]:
         cut_after_local=cut_after_local,
     )
 
+    buckets_spot = group_spot_to_6h_berlin(
+        price_by_hour_utc=price_by_hour,
+        month_start_local=month_start_local,
+        month_end_local=month_end_local,
+        cut_after_local=cut_after_local,
+    )
+
     days_in_month = monthrange(year, month)[1]
-    today_index = max(0, min(days_in_month - 1, (now_local.day - 1)))
+    if mode == "current":
+        today_index = max(0, min(days_in_month - 1, (now_local.day - 1)))
+    else:
+        today_index = days_in_month - 1  # prev: immer letzter Tag
 
     return {
         "updated_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
@@ -330,9 +391,16 @@ def build_month_payload(year: int, month: int, mode: str) -> Dict[str, Any]:
             "end_local": month_end_local.isoformat(),
             "cut_after_local": now_local.isoformat() if mode == "current" else None,
         },
-        "estimate_eur_mwh": round(est, 2) if est is not None else None,
 
-        # placeholders
+        # Schätzung (gewichtet)
+        "estimate_eur_mwh": round(est_weighted, 2) if est_weighted is not None else None,
+        "series_6h": [{"label": b.label, "value": round(b.value, 2)} for b in buckets_weighted],
+
+        # Spot (Day-Ahead) ungefiltert/ungewichtet
+        "estimate_spot_eur_mwh": round(est_spot, 2) if est_spot is not None else None,
+        "series_6h_spot": [{"label": b.label, "value": round(b.value, 2)} for b in buckets_spot],
+
+        # placeholders official
         "official_eur_mwh": None,
         "official_available": False,
         "official_checked_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
@@ -342,10 +410,9 @@ def build_month_payload(year: int, month: int, mode: str) -> Dict[str, Any]:
         "debug": {
             "price_hours": len(price_by_hour),
             "wind_hours": len(energy_by_hour),
-            "bucket_count": len(buckets),
+            "bucket_count_weighted": len(buckets_weighted),
+            "bucket_count_spot": len(buckets_spot),
         },
-
-        "series_6h": [{"label": b.label, "value": round(b.value, 2)} for b in buckets],
     }
 
 
