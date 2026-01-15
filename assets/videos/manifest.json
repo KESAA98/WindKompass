@@ -1,0 +1,7 @@
+{
+  "fadeMs": 1200,
+  "fadeLeadMs": 1200,
+  "videos": [
+    "bg_01.mp4"
+  ]
+}
