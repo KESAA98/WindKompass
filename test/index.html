@@ -3,474 +3,222 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Monats-Schätzung (Day-Ahead) – DE</title>
-
-  <!-- Chart.js + Annotation (für die “heute”-Linie) -->
+  <title>Monats-Schätzung</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"></script>
-
   <style>
     :root{
-      --bg:#0b0f1a;
-      --card:#121a2b;
-      --muted:#8ea2c6;
-      --text:#eaf1ff;
-      --line:rgba(255,255,255,.10);
-      --good:#4ade80;
-      --warn:#fbbf24;
-      --bad:#fb7185;
+      --bg:#fff;
+      --text:#0f172a;
+      --muted:#64748b;
+      --grid:rgba(15,23,42,.08);
+      --green:#16a34a;
+      --greenFill:rgba(22,163,74,.18);
     }
-    body{
-      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
-      background: radial-gradient(1000px 600px at 20% -10%, rgba(59,130,246,.25), transparent 60%),
-                  radial-gradient(800px 500px at 80% 0%, rgba(34,197,94,.18), transparent 55%),
-                  var(--bg);
-      color:var(--text);
-    }
-    .wrap{max-width:1100px;margin:28px auto;padding:0 16px;}
-    .grid{
-      display:grid; gap:16px;
-      grid-template-columns: 1.2fr .8fr;
-    }
-    .card{
-      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-      border:1px solid var(--line);
-      border-radius:18px;
-      padding:16px;
-      box-shadow: 0 18px 60px rgba(0,0,0,.35);
-      backdrop-filter: blur(8px);
-    }
-    h1{font-size:18px;margin:0 0 10px 0;color:#d9e6ff;font-weight:650;}
-    .sub{color:var(--muted);font-size:13px;line-height:1.35}
-    .kpi{
-      display:flex; flex-direction:column; gap:10px;
-    }
-    .big{
-      font-size:44px; font-weight:800; letter-spacing:-.02em;
-      line-height:1;
-    }
-    .unit{font-size:16px;color:var(--muted);margin-left:8px;font-weight:600}
-    .pillrow{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
-    .pill{
-      border:1px solid var(--line);
-      padding:7px 10px;
-      border-radius:999px;
-      font-size:12px;
-      color:#cfe0ff;
-      background: rgba(255,255,255,.03);
-    }
-    .row{display:flex;justify-content:space-between;align-items:center;gap:10px}
-    .progress{
-      position:relative; height:10px; border-radius:999px;
-      background: rgba(255,255,255,.08);
-      overflow:hidden;
-      border:1px solid var(--line);
-    }
-    .progress > .fill{
-      position:absolute; left:0; top:0; bottom:0;
-      width:0%;
-      background: linear-gradient(90deg, rgba(59,130,246,.95), rgba(34,197,94,.95));
-    }
-    .progress > .marker{
-      position:absolute; top:-5px;
-      width:2px; height:20px;
-      background: rgba(255,255,255,.85);
-      box-shadow: 0 0 0 2px rgba(11,15,26,.6);
-    }
-    .smallnote{font-size:12px;color:var(--muted);margin-top:8px}
-    .controls{
-      display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:10px
-    }
-    select, button{
-      background: rgba(255,255,255,.04);
-      color: var(--text);
-      border:1px solid var(--line);
-      border-radius:12px;
-      padding:10px 12px;
-      font-size:13px;
-      outline:none;
-    }
-    button{cursor:pointer}
-    canvas{width:100% !important; height:420px !important;}
-    .warnbox{
-      margin-top:10px;
-      font-size:12px; color:#ffd7a8;
-      border:1px solid rgba(251,191,36,.25);
-      background: rgba(251,191,36,.08);
-      padding:10px 12px;
-      border-radius:14px;
-      display:none;
-    }
-    @media (max-width: 900px){
-      .grid{grid-template-columns: 1fr;}
-      canvas{height:360px !important;}
-    }
+    body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;color:var(--text);}
+    .wrap{max-width:1100px;margin:26px auto;padding:0 16px;}
+    .head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+    h1{font-size:18px;margin:0;font-weight:750;letter-spacing:-.01em}
+    .sub{font-size:13px;color:var(--muted);margin-top:3px}
+    .kpi{font-size:26px;font-weight:800;letter-spacing:-.02em}
+    .kpi small{font-size:13px;color:var(--muted);font-weight:650;margin-left:8px}
+    .box{border:1px solid rgba(15,23,42,.10);border-radius:14px;padding:10px 10px 6px 10px;}
+    canvas{width:100% !important;height:420px !important;}
+    .err{display:none;margin-top:10px;font-size:13px;color:#b45309;background:rgba(251,191,36,.18);border:1px solid rgba(251,191,36,.35);border-radius:12px;padding:10px 12px;}
+    @media (max-width: 900px){canvas{height:360px !important;}}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="grid">
-      <div class="card">
-        <div class="row">
-          <div>
-            <h1>Day-Ahead Preise (6h) – aktueller Monat</h1>
-            <div class="sub" id="subtitle">Lädt…</div>
-          </div>
-          <div class="controls">
-            <select id="weighting">
-              <option value="none">ungewichtet (Preis-Mittel)</option>
-              <option value="pv">PV-ähnlich (mittags höher gewichtet)</option>
-              <option value="wind">Wind-ähnlich (nachts/winterlastig)</option>
-            </select>
-            <button id="reload">Neu laden</button>
-          </div>
-        </div>
-        <div class="warnbox" id="warnbox"></div>
-        <canvas id="chart"></canvas>
-        <div class="smallnote">
-          Hinweis: Das ist eine <b>Schätzung</b> aus Börsenpreisen + einfachem Profil. Offizielle Monatsmarktwerte kommen später von den ÜNB. :contentReference[oaicite:1]{index=1}
-        </div>
+    <div class="head">
+      <div>
+        <h1>Day-Ahead Börsenpreis – aktueller Monat</h1>
+        <div class="sub" id="subtitle">Lädt…</div>
       </div>
+      <div class="kpi"><span id="kpi">—</span><small>€/MWh (Schätzung)</small></div>
+    </div>
 
-      <div class="card">
-        <div class="kpi">
-          <div>
-            <div class="sub">Schätzung (Monat bis heute + Rest)</div>
-            <div class="big"><span id="kpiValue">–</span><span class="unit">€/MWh</span></div>
-          </div>
-
-          <div class="pillrow">
-            <div class="pill" id="pillDays">–</div>
-            <div class="pill" id="pillMode">–</div>
-            <div class="pill" id="pillData">–</div>
-          </div>
-
-          <div>
-            <div class="row">
-              <div class="sub">Monatsfortschritt</div>
-              <div class="sub" id="progressText">–</div>
-            </div>
-            <div class="progress" aria-label="Monatsfortschritt">
-              <div class="fill" id="progressFill"></div>
-              <div class="marker" id="progressMarker" style="left:0%"></div>
-            </div>
-          </div>
-
-          <div class="smallnote" id="methodNote">
-            Rest des Monats wird konservativ über den Durchschnitt der letzten 7 verfügbaren Tage geschätzt.
-          </div>
-        </div>
-      </div>
+    <div class="box">
+      <canvas id="c"></canvas>
+      <div class="err" id="err"></div>
     </div>
   </div>
 
 <script>
-  // ========= Konfiguration =========
-  // Energy-Charts (Fraunhofer ISE) – öffentliche API (CORS i.d.R. ok).
-  // Falls der Endpoint bei dir anders heißt: NUR diese URL anpassen.
-  // Erwartetes JSON (typisch): { unix_seconds:[...], price:[...] } oder { unix_seconds:[...], day_ahead:[...] }
-  const EC_URL = (startSec, endSec) =>
-    `https://api.energy-charts.info/price?country=de&start=${startSec}&end=${endSec}`;
+  const BZN = "DE-LU";
+  const TZ  = "Europe/Berlin";
 
-  const TZ = "Europe/Berlin";
+  // Optional: offizieller Monatsmarktwert (Vormonat) – später per API/Proxy automatisieren
+  let OFFICIAL_LAST_MONTH = null; // z.B. 78.12
 
-  // ========= Helpers =========
-  function startOfMonthBerlin(d=new Date()){
-    const dt = new Date(d.toLocaleString("en-US",{timeZone:TZ}));
-    return new Date(dt.getFullYear(), dt.getMonth(), 1, 0,0,0);
+  function berlinNow(){ return new Date(new Date().toLocaleString("en-US",{timeZone:TZ})); }
+  function iso(d){
+    const x = new Date(d.toLocaleString("en-US",{timeZone:TZ}));
+    return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,"0")}-${String(x.getDate()).padStart(2,"0")}`;
   }
-  function endOfMonthBerlin(d=new Date()){
-    const dt = new Date(d.toLocaleString("en-US",{timeZone:TZ}));
-    return new Date(dt.getFullYear(), dt.getMonth()+1, 0, 23,59,59);
+  function startOfMonth(){
+    const n = berlinNow();
+    return new Date(n.getFullYear(), n.getMonth(), 1);
   }
-  function startOfDayBerlin(d=new Date()){
-    const dt = new Date(d.toLocaleString("en-US",{timeZone:TZ}));
-    return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate(), 0,0,0);
+  function endOfMonth(){
+    const n = berlinNow();
+    return new Date(n.getFullYear(), n.getMonth()+1, 0);
   }
-  function toUnixSecondsBerlin(localDateObj){
-    // localDateObj ist "Berlin-local" erzeugt (siehe oben), wir interpretieren ihn als Local und nehmen UTC-seconds.
-    // Für unsere Visualisierung reicht das; die Energy-Charts API arbeitet mit unix_seconds.
-    return Math.floor(localDateObj.getTime()/1000);
-  }
-  function fmtDateBerlin(d){
-    return new Intl.DateTimeFormat("de-DE",{timeZone:TZ, day:"2-digit", month:"2-digit", year:"numeric"}).format(d);
-  }
-  function clamp(n,a,b){return Math.max(a,Math.min(b,n));}
-
-  // Heuristische Gewichte je Stunde (nur fürs Gefühl, NICHT offiziell)
-  function hourWeight(mode, hour){
-    if(mode==="pv"){
-      // Peak mittags 11–15
-      const x = Math.abs(hour-13);
-      return Math.max(0.15, 1.2 - 0.12*x); // 0.15..1.2
-    }
-    if(mode==="wind"){
-      // leicht mehr Gewicht nachts (0–6, 20–23)
-      if(hour<=6 || hour>=20) return 1.15;
-      return 0.90;
-    }
-    return 1.0;
+  function avg(a){
+    const x = a.filter(v=>Number.isFinite(v));
+    return x.length ? x.reduce((s,v)=>s+v,0)/x.length : NaN;
   }
 
-  function groupTo6h(unixSeconds, values){
-    // Erwartung: stündliche Werte. Wir aggregieren in 6h Blöcke (00–05, 06–11, 12–17, 18–23)
-    const buckets = new Map();
+  // 6h Aggregation: 00-05 / 06-11 / 12-17 / 18-23
+  function to6h(unixSeconds, prices){
+    const map = new Map();
     for(let i=0;i<unixSeconds.length;i++){
+      const p = Number(prices[i]);
+      if(!Number.isFinite(p)) continue;
       const t = unixSeconds[i]*1000;
-      const dt = new Date(t);
-      const berlin = new Date(dt.toLocaleString("en-US",{timeZone:TZ}));
-      const h = berlin.getHours();
-      const block = Math.floor(h/6); // 0..3
-      const key = `${berlin.getFullYear()}-${String(berlin.getMonth()+1).padStart(2,"0")}-${String(berlin.getDate()).padStart(2,"0")}-${block}`;
-      if(!buckets.has(key)) buckets.set(key, { sum:0, n:0, ts:t, hourBlock:block, y:berlin.getFullYear(), m:berlin.getMonth()+1, d:berlin.getDate() });
-      const b = buckets.get(key);
-      b.sum += Number(values[i]);
-      b.n += 1;
+      const b = new Date(new Date(t).toLocaleString("en-US",{timeZone:TZ}));
+      const block = Math.floor(b.getHours()/6);
+      const key = `${b.getFullYear()}-${b.getMonth()+1}-${b.getDate()}-${block}`;
+      if(!map.has(key)) map.set(key,{t, sum:0, n:0, day:b.getDate(), mon:b.getMonth()+1, block});
+      const o = map.get(key); o.sum += p; o.n++;
     }
-    const out = Array.from(buckets.values()).sort((a,b)=>a.ts-b.ts);
-    return out.map(b=>{
-      const label = `${String(b.d).padStart(2,"0")}.${String(b.m).padStart(2,"0")} ${String(b.hourBlock*6).padStart(2,"0")}:00`;
-      return { x:b.ts, y:b.sum/(b.n||1), label };
+    return Array.from(map.values()).sort((a,b)=>a.t-b.t).map(o=>{
+      const hh = String(o.block*6).padStart(2,"0");
+      return { label:`${String(o.day).padStart(2,"0")}.${String(o.mon).padStart(2,"0")} ${hh}:00`, value:o.sum/(o.n||1) };
     });
   }
 
-  function weightedMonthEstimate(unixSeconds, prices, mode){
-    // gewichteter Durchschnitt (Preis * Gewicht) / Gewicht
-    let num=0, den=0;
-    for(let i=0;i<unixSeconds.length;i++){
-      const dt = new Date(unixSeconds[i]*1000);
-      const berlin = new Date(dt.toLocaleString("en-US",{timeZone:TZ}));
-      const w = hourWeight(mode, berlin.getHours());
-      const p = Number(prices[i]);
-      if(Number.isFinite(p)){
-        num += p*w;
-        den += w;
+  // Plugin: “Strich nach rechts raus” + Texte
+  const calloutPlugin = {
+    id:"callout",
+    afterDatasetsDraw(chart, args, opts){
+      const {ctx, chartArea} = chart;
+      const meta = chart.getDatasetMeta(0);
+      const idx = opts.todayIndex;
+      if(!meta?.data?.length || idx==null || idx<0 || idx>=meta.data.length) return;
+
+      const pt = meta.data[idx];
+      const x = pt.x, y = pt.y;
+      const x2 = chartArea.right + 26;
+
+      ctx.save();
+      ctx.strokeStyle = "rgba(22,163,74,.95)";
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x2,y); ctx.stroke();
+
+      ctx.fillStyle = "rgba(22,163,74,.95)";
+      ctx.beginPath(); ctx.arc(x2,y,3.6,0,Math.PI*2); ctx.fill();
+
+      ctx.fillStyle = "#0f172a";
+      ctx.font = "800 13px system-ui,-apple-system,Segoe UI,Roboto,Arial";
+      ctx.textBaseline = "bottom";
+      ctx.fillText(opts.topText || "", x2+10, y-6);
+
+      if(opts.bottomText){
+        ctx.fillStyle = "rgba(15,23,42,.72)";
+        ctx.font = "700 12px system-ui,-apple-system,Segoe UI,Roboto,Arial";
+        ctx.textBaseline = "top";
+        ctx.fillText(opts.bottomText, x2+10, y+6);
       }
+      ctx.restore();
     }
-    return den>0 ? num/den : NaN;
-  }
+  };
+  Chart.register(calloutPlugin);
 
-  function avg(arr){
-    const xs = arr.filter(x=>Number.isFinite(x));
-    return xs.length ? xs.reduce((a,b)=>a+b,0)/xs.length : NaN;
-  }
-
-  // ========= UI / Chart =========
   let chart;
 
-  async function loadAndRender(){
-    document.getElementById("warnbox").style.display="none";
+  async function load(){
+    const err = document.getElementById("err");
+    err.style.display="none";
 
-    const mode = document.getElementById("weighting").value;
-    const now = new Date();
-    const mStart = startOfMonthBerlin(now);
-    const mEnd = endOfMonthBerlin(now);
-    const todayStart = startOfDayBerlin(now);
+    const s = startOfMonth(), e = endOfMonth();
+    const start = iso(s), end = iso(e);
+    document.getElementById("subtitle").textContent = `${start} → ${end} (${BZN})`;
 
-    const startSec = toUnixSecondsBerlin(mStart);
-    const endSec = toUnixSecondsBerlin(mEnd);
-
-    document.getElementById("subtitle").textContent =
-      `${fmtDateBerlin(mStart)} – ${fmtDateBerlin(mEnd)} (Berlin)`;
-
-    // Fetch
-    let data;
+    const url = `https://api.energy-charts.info/price?bzn=${encodeURIComponent(BZN)}&start=${start}&end=${end}`;
+    let json;
     try{
-      const res = await fetch(EC_URL(startSec, endSec), { cache:"no-store" });
-      if(!res.ok) throw new Error(`HTTP ${res.status}`);
-      data = await res.json();
-    }catch(e){
-      const wb = document.getElementById("warnbox");
-      wb.style.display="block";
-      wb.textContent = `API-Fehler: ${e.message}. Tipp: Prüfe den Endpoint in EC_URL().`;
-      throw e;
-    }
-
-    // Datenfeld finden (API kann je nach Version unterschiedliche Keys haben)
-    const unix = data.unix_seconds || data.unixSeconds || [];
-    const series =
-      data.price || data.day_ahead || data.dayAhead || data.prices || [];
-
-    if(!Array.isArray(unix) || !Array.isArray(series) || unix.length===0){
-      const wb = document.getElementById("warnbox");
-      wb.style.display="block";
-      wb.textContent = `Unerwartetes API-Format. Erwartet z.B. { unix_seconds:[...], price:[...] }.`;
+      const r = await fetch(url, {cache:"no-store"});
+      if(!r.ok) throw new Error(`HTTP ${r.status}`);
+      json = await r.json();
+    }catch(ex){
+      err.style.display="block";
+      err.textContent = `API-Fehler: ${ex.message}`;
       return;
     }
 
-    // Nur aktueller Monat (sicherheitshalber)
-    const startMs = mStart.getTime();
-    const endMs = mEnd.getTime();
-    const filtUnix = [];
-    const filtPrice = [];
-    for(let i=0;i<unix.length;i++){
-      const tms = unix[i]*1000;
-      if(tms>=startMs && tms<=endMs && Number.isFinite(Number(series[i]))){
-        filtUnix.push(unix[i]);
-        filtPrice.push(Number(series[i]));
-      }
+    const unix = json.unix_seconds;
+    const prices = json.price;
+    if(!Array.isArray(unix) || !Array.isArray(prices) || unix.length===0){
+      err.style.display="block";
+      err.textContent = "Unerwartetes API-Format (unix_seconds/price fehlen).";
+      return;
     }
 
-    // Schätzung: bis “heute” echte Daten, Rest = Ø letzte 7 verfügbare Tage (gewichtet)
-    const todayMs = todayStart.getTime();
-    const pastUnix = [];
-    const pastPrice = [];
-    const futureUnix = [];
-    const futurePrice = [];
-    for(let i=0;i<filtUnix.length;i++){
-      const tms = filtUnix[i]*1000;
-      if(tms < todayMs){
-        pastUnix.push(filtUnix[i]);
-        pastPrice.push(filtPrice[i]);
-      } else {
-        futureUnix.push(filtUnix[i]);
-        futurePrice.push(filtPrice[i]); // oft noch leer/0 je nach Quelle; wir überschreiben ggf.
-      }
+    const pts = to6h(unix, prices);
+    const labels = pts.map(p=>p.label);
+    const values = pts.map(p=>p.value);
+
+    const now = berlinNow();
+    const todayPrefix = `${String(now.getDate()).padStart(2,"0")}.${String(now.getMonth()+1).padStart(2,"0")}`;
+    const todayIndex = labels.findIndex(l=>l.startsWith(todayPrefix));
+    const idx = todayIndex>=0 ? todayIndex : values.length-1;
+
+    // Schätzung: Ø bis heute + Rest = Ø letzte 7 Tage (simpel & stabil)
+    const soFar = values.slice(0, idx+1);
+    const soFarMean = avg(soFar);
+
+    const uniqueDays = [...new Set(labels.map(l=>l.slice(0,5)))];
+    const last7Days = uniqueDays.slice(-7);
+    const last7Vals = pts.filter(p=>last7Days.includes(p.label.slice(0,5))).map(p=>p.value);
+    const restMean = avg(last7Vals);
+
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+    const part = (now.getDate()-1)/daysInMonth;
+
+    const estimate = (Number.isFinite(soFarMean) && Number.isFinite(restMean))
+      ? (soFarMean*part + restMean*(1-part))
+      : soFarMean;
+
+    document.getElementById("kpi").textContent = Number.isFinite(estimate) ? estimate.toFixed(2) : "—";
+
+    const topText = `Schätzung: ${Number.isFinite(estimate) ? estimate.toFixed(2) : "—"} €/MWh`;
+    let bottomText = "";
+    if(now.getDate() >= 10){
+      bottomText = `Vormonat (offiziell): ${OFFICIAL_LAST_MONTH==null ? "—" : OFFICIAL_LAST_MONTH.toFixed(2)} €/MWh`;
     }
 
-    // “letzte 7 Tage”-Durchschnitt als Rest-Schätzer (aus past)
-    // Wir machen es auf Tagesbasis: Tagesmittel und dann Ø der letzten 7 Tage
-    const dayMap = new Map();
-    for(let i=0;i<pastUnix.length;i++){
-      const dt = new Date(pastUnix[i]*1000);
-      const berlin = new Date(dt.toLocaleString("en-US",{timeZone:TZ}));
-      const key = `${berlin.getFullYear()}-${berlin.getMonth()+1}-${berlin.getDate()}`;
-      if(!dayMap.has(key)) dayMap.set(key, []);
-      dayMap.get(key).push({u:pastUnix[i], p:pastPrice[i]});
-    }
-    const dayKeys = Array.from(dayMap.keys()).sort((a,b)=> new Date(a)-new Date(b));
-    const lastKeys = dayKeys.slice(-7);
-    const dayMeans = lastKeys.map(k=>{
-      const items = dayMap.get(k);
-      // gewichteter Tages-Ø
-      let num=0, den=0;
-      for(const it of items){
-        const dt = new Date(it.u*1000);
-        const berlin = new Date(dt.toLocaleString("en-US",{timeZone:TZ}));
-        const w = hourWeight(mode, berlin.getHours());
-        num += it.p*w; den += w;
-      }
-      return den>0 ? num/den : NaN;
-    });
-    const restEstimator = avg(dayMeans);
-
-    // Wenn für “future” keine validen Preise da sind, füllen wir sie mit restEstimator
-    const filledUnix = filtUnix.slice();
-    const filledPrice = filtPrice.slice(); // hier sind nur valide, future kann trotzdem “valide” sein; egal
-    // Für eine saubere “Monats”-Schätzung bauen wir “vollständig”:
-    const fullUnix = [];
-    const fullPrice = [];
-    for(let i=0;i<filtUnix.length;i++){
-      const tms = filtUnix[i]*1000;
-      fullUnix.push(filtUnix[i]);
-      if(tms < todayMs){
-        fullPrice.push(filtPrice[i]);
-      } else {
-        // wenn es echte Werte gibt, nimm sie; sonst restEstimator
-        const p = filtPrice[i];
-        fullPrice.push(Number.isFinite(p) ? p : restEstimator);
-      }
-    }
-
-    const est = weightedMonthEstimate(fullUnix, fullPrice, mode);
-    document.getElementById("kpiValue").textContent = Number.isFinite(est) ? est.toFixed(2) : "–";
-
-    // Pills
-    const berlinNow = new Date(now.toLocaleString("en-US",{timeZone:TZ}));
-    const daysInMonth = new Date(berlinNow.getFullYear(), berlinNow.getMonth()+1, 0).getDate();
-    const dayOfMonth = berlinNow.getDate();
-    document.getElementById("pillDays").textContent = `Heute: ${String(dayOfMonth).padStart(2,"0")}.${String(berlinNow.getMonth()+1).padStart(2,"0")} / ${daysInMonth}`;
-    document.getElementById("pillMode").textContent = `Profil: ${mode==="none"?"Preis-Mittel":(mode==="pv"?"PV-ähnlich":"Wind-ähnlich")}`;
-    document.getElementById("pillData").textContent = `Datenpunkte: ${filtUnix.length}`;
-
-    // Progress bar
-    const pct = clamp((dayOfMonth-1)/(daysInMonth-1), 0, 1);
-    document.getElementById("progressFill").style.width = `${(pct*100).toFixed(1)}%`;
-    document.getElementById("progressMarker").style.left = `${(pct*100).toFixed(1)}%`;
-    document.getElementById("progressText").textContent = `${Math.round(pct*100)}%`;
-
-    // Chart data (6h)
-    const pts6h = groupTo6h(filtUnix, filtPrice);
-    const labels = pts6h.map(p=>p.label);
-    const values = pts6h.map(p=>p.y);
-
-    // “heute”-Linie im 6h-Index finden (erste 6h-Bucket von heute)
-    const todayKeyPrefix = `${String(dayOfMonth).padStart(2,"0")}.${String(berlinNow.getMonth()+1).padStart(2,"0")}`;
-    const todayIdx = labels.findIndex(l => l.startsWith(todayKeyPrefix));
-
-    // render
-    const ctx = document.getElementById("chart");
     if(chart) chart.destroy();
-
-    Chart.register(window['chartjs-plugin-annotation']);
-
-    chart = new Chart(ctx, {
-      type: 'bar',
-      data: {
+    chart = new Chart(document.getElementById("c"),{
+      type:"line",
+      data:{
         labels,
-        datasets: [{
-          label: 'Day-Ahead Preis (Ø je 6h)',
-          data: values
+        datasets:[{
+          data:values,
+          borderColor:"rgba(22,163,74,.95)",
+          backgroundColor:"rgba(22,163,74,.18)",
+          fill:true,
+          tension:0.25,
+          pointRadius:0,
+          borderWidth:2
         }]
       },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: (c) => ` ${c.parsed.y.toFixed(2)} €/MWh`
-            }
-          },
-          annotation: {
-            annotations: todayIdx>=0 ? {
-              todayLine: {
-                type: 'line',
-                xMin: todayIdx,
-                xMax: todayIdx,
-                borderWidth: 2,
-                borderColor: 'rgba(255,255,255,.85)',
-                label: {
-                  display: true,
-                  content: [`Heute`, `Schätzung → ${Number.isFinite(est)?est.toFixed(2):"–"} €/MWh`],
-                  position: 'start',
-                  backgroundColor: 'rgba(0,0,0,.35)',
-                  color: 'rgba(255,255,255,.95)',
-                  padding: 8,
-                  borderRadius: 10
-                }
-              }
-            } : {}
-          }
+      options:{
+        maintainAspectRatio:false,
+        layout:{ padding:{ right: 170 } }, // Platz für den Callout rechts
+        plugins:{
+          legend:{display:false},
+          tooltip:{ callbacks:{ label:(c)=>` ${c.parsed.y.toFixed(2)} €/MWh` } },
+          callout:{ todayIndex: idx, topText, bottomText }
         },
-        scales: {
-          x: {
-            ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 10 },
-            grid: { color: 'rgba(255,255,255,.06)' }
-          },
-          y: {
-            ticks: {
-              callback: (v)=> `${v} €/MWh`
-            },
-            grid: { color: 'rgba(255,255,255,.06)' }
-          }
+        scales:{
+          x:{ grid:{ color:"rgba(15,23,42,.06)" }, ticks:{ maxTicksLimit: 10 } },
+          y:{ grid:{ color:"rgba(15,23,42,.06)" } }
         }
       }
     });
-
-    // Method note
-    document.getElementById("methodNote").textContent =
-      Number.isFinite(restEstimator)
-        ? `Rest des Monats wird über Ø der letzten 7 verfügbaren Tage geschätzt: ${restEstimator.toFixed(2)} €/MWh.`
-        : `Rest des Monats wird geschätzt (zu wenig Historie für “letzte 7 Tage”).`;
   }
 
-  document.getElementById("reload").addEventListener("click", ()=>loadAndRender());
-  document.getElementById("weighting").addEventListener("change", ()=>loadAndRender());
-
-  loadAndRender();
+  load();
 </script>
 </body>
 </html>
