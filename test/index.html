@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Monatsmarktwert – Spot & Schätzung</title>
+  <title>Monatsmarktwert Wind Onshore</title>
   <style>
     :root{
       --bg:#f6f8fb;
@@ -13,15 +13,14 @@
       --muted:#64748b;
       --grid:#eef3f7;
 
-      --spot:#64748b;         /* Spot (Day-Ahead) */
-      --est:#22c55e;          /* Schätzung (gewichtet) */
-      --estFill: rgba(34,197,94,.10);
+      --spot:#6b7280;          /* Spot (Day-Ahead) */
+      --est:#22c55e;           /* Marktwert (Schätzung) */
+      --estFill:rgba(34,197,94,.12);
 
-      --marker:#cbd5e1;
-      --accent:#2563eb;
+      --sideBg:#fafcff;
 
-      --tooltipBg:#0f172a;
-      --tooltipText:#ffffff;
+      --tipBg:#0f172a;
+      --tipText:#ffffff;
     }
 
     *{box-sizing:border-box}
@@ -33,93 +32,110 @@
     }
     .wrap{max-width:1120px; margin:28px auto; padding:0 16px;}
 
-    /* EIN Container für alles */
+    /* EIN Container */
     .card{
       background:var(--card);
       border:1px solid var(--border);
-      border-radius:16px;
+      border-radius:18px;
       box-shadow:0 10px 28px rgba(15,23,42,.06);
-      padding:18px;
+      overflow:hidden;
     }
 
     .head{
+      padding:18px 18px 12px 18px;
       display:flex;
-      align-items:flex-start;
       justify-content:space-between;
+      align-items:flex-start;
       gap:16px;
-      margin-bottom:10px;
     }
     .title{
-      font-size:18px;
-      font-weight:750;
       margin:0;
+      font-size:18px;
+      font-weight:720;
       letter-spacing:.2px;
     }
-    .meta{
+    .subtitle{
+      margin-top:4px;
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    .content{
+      display:grid;
+      grid-template-columns: 1.6fr 0.9fr;
+      gap:0;
+      border-top:1px solid var(--border);
+    }
+
+    /* LINKS: Chart */
+    .chartArea{
+      padding:14px 14px 10px 14px;
+    }
+    .chartBox{
+      position:relative;
+      border:1px solid var(--border);
+      border-radius:14px;
+      background:linear-gradient(180deg,#fbfdff,#ffffff);
+      overflow:hidden;
+    }
+    canvas{width:100%; height:360px; display:block;}
+
+    /* RECHTS: Info */
+    .side{
+      background:var(--sideBg);
+      border-left:1px solid var(--border);
+      padding:16px 16px 14px 16px;
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+      min-height: 100%;
+    }
+    .kpiTitle{
+      font-size:12px;
+      color:var(--muted);
+      letter-spacing:.2px;
+    }
+    .kpiValue{
+      font-size:28px;
+      font-weight:720;
+      line-height:1.05;
+      margin-top:4px;
+    }
+    .kpiLabel{
       font-size:12px;
       color:var(--muted);
       margin-top:4px;
     }
-    .updated{
+    .kpiBlock{padding:10px 10px; border:1px solid var(--border); border-radius:14px; background:#fff;}
+    .row{
+      display:flex; gap:10px; align-items:baseline; justify-content:space-between;
+    }
+    .delta{
+      font-size:13px;
+      font-weight:650;
+    }
+    .deltaSub{
       font-size:12px;
       color:var(--muted);
-      white-space:nowrap;
-      padding-top:4px;
+      margin-top:2px;
     }
 
-    .chartWrap{
-      position:relative;
-      border-radius:14px;
-      overflow:hidden;
-      background:linear-gradient(180deg,#fbfdff, #ffffff);
-      border:1px solid var(--border);
-      padding:10px;
-    }
-    canvas{width:100%; height:360px; display:block;}
-
-    .footer{
-      margin-top:10px;
-      display:flex;
-      gap:12px;
-      align-items:flex-start;
-      justify-content:space-between;
-      flex-wrap:wrap;
-    }
     .legend{
       display:flex;
       gap:14px;
       align-items:center;
+      padding:10px 18px 14px 18px;
       color:var(--muted);
       font-size:12px;
     }
-    .dot{
-      width:10px; height:10px; border-radius:999px; display:inline-block;
-      margin-right:8px; transform:translateY(1px);
-    }
-    .hint{
-      font-size:12px;
-      color:var(--muted);
-      line-height:1.35;
-      max-width:820px;
-    }
-
-    .err{
-      margin-top:12px;
-      padding:10px 12px;
-      border-radius:12px;
-      background:#fff7ed;
-      border:1px solid #fed7aa;
-      color:#9a3412;
-      font-size:12px;
-      display:none;
-    }
+    .dot{width:9px; height:9px; border-radius:999px; display:inline-block; margin-right:8px; transform:translateY(1px);}
 
     .tip{
       position:absolute;
       pointer-events:none;
       transform:translate(-50%, calc(-100% - 10px));
-      background:var(--tooltipBg);
-      color:var(--tooltipText);
+      background:var(--tipBg);
+      color:var(--tipText);
       padding:7px 9px;
       border-radius:10px;
       font-size:12px;
@@ -135,7 +151,24 @@
       bottom:-6px;
       transform:translateX(-50%);
       border:6px solid transparent;
-      border-top-color:var(--tooltipBg);
+      border-top-color:var(--tipBg);
+    }
+
+    .err{
+      display:none;
+      margin:12px 18px 16px 18px;
+      padding:10px 12px;
+      border-radius:12px;
+      background:#fff7ed;
+      border:1px solid #fed7aa;
+      color:#9a3412;
+      font-size:12px;
+    }
+
+    @media (max-width: 920px){
+      .content{grid-template-columns: 1fr;}
+      .side{border-left:none; border-top:1px solid var(--border);}
+      canvas{height:320px;}
     }
   </style>
 </head>
@@ -144,28 +177,52 @@
     <div class="card">
       <div class="head">
         <div>
-          <h1 class="title">Monatsmarktwert Wind Onshore – Spot & Schätzung</h1>
-          <div class="meta" id="subline">–</div>
+          <h1 class="title">Monatsmarktwert Wind Onshore</h1>
+          <div class="subtitle" id="subline">–</div>
         </div>
-        <div class="updated" id="updated">–</div>
       </div>
 
-      <div class="chartWrap" id="canvasWrap">
-        <canvas id="chart"></canvas>
-        <div class="tip" id="tip"></div>
+      <div class="content">
+        <!-- LINKS -->
+        <div class="chartArea">
+          <div class="chartBox" id="chartBox">
+            <canvas id="chart"></canvas>
+            <div class="tip" id="tip"></div>
+          </div>
+        </div>
+
+        <!-- RECHTS -->
+        <aside class="side" aria-label="Monatswerte">
+          <div class="kpiBlock">
+            <div class="kpiTitle">Spot (Monat)</div>
+            <div class="kpiValue" id="kpiSpot" style="color:var(--spot)">–</div>
+            <div class="kpiLabel" id="kpiSpotSub">–</div>
+          </div>
+
+          <div class="kpiBlock">
+            <div class="kpiTitle">Marktwert (Schätzung)</div>
+            <div class="kpiValue" id="kpiEst" style="color:var(--est)">–</div>
+            <div class="kpiLabel" id="kpiEstSub">–</div>
+          </div>
+
+          <div class="kpiBlock">
+            <div class="row">
+              <div>
+                <div class="kpiTitle">Vergleich</div>
+                <div class="delta" id="kpiDelta">–</div>
+                <div class="deltaSub" id="kpiPrev">–</div>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <div class="legend">
+        <span><span class="dot" style="background:var(--spot)"></span>Spot (Day-Ahead)</span>
+        <span><span class="dot" style="background:var(--est)"></span>Marktwert (Schätzung)</span>
       </div>
 
       <div class="err" id="err"></div>
-
-      <div class="footer">
-        <div class="legend">
-          <span><span class="dot" style="background:var(--spot)"></span>Spot (Day-Ahead)</span>
-          <span><span class="dot" style="background:var(--est)"></span>Schätzung (gewichtet)</span>
-        </div>
-        <div class="hint">
-          Hinweis: Schätzung = Spotmarktpreis (Energy-Charts) gewichtet mit Wind-Onshore-Erzeugung (SMARD).
-        </div>
-      </div>
     </div>
   </div>
 
@@ -175,19 +232,24 @@
   const PATH_PREV    = "../data/price_prev_month.json";
 
   const elSub = document.getElementById("subline");
-  const elUpd = document.getElementById("updated");
   const elErr = document.getElementById("err");
 
-  const wrap = document.getElementById("canvasWrap");
-  const tip  = document.getElementById("tip");
+  const elKpiSpot = document.getElementById("kpiSpot");
+  const elKpiSpotSub = document.getElementById("kpiSpotSub");
+  const elKpiEst = document.getElementById("kpiEst");
+  const elKpiEstSub = document.getElementById("kpiEstSub");
+  const elKpiDelta = document.getElementById("kpiDelta");
+  const elKpiPrev  = document.getElementById("kpiPrev");
 
+  const box = document.getElementById("chartBox");
+  const tip = document.getElementById("tip");
   const c = document.getElementById("chart");
   const ctx = c.getContext("2d");
 
   const dpr = () => Math.max(1, window.devicePixelRatio || 1);
 
   const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
-  const monthName = (yyyyMm) => {
+  const monthLabel = (yyyyMm) => {
     const [y,m] = (yyyyMm || "").split("-").map(Number);
     if(!y || !m) return "–";
     return `${MONTHS[m-1]} ${y}`;
@@ -203,8 +265,7 @@
   }
 
   async function loadJson(url){
-    const bust = `?v=${Date.now()}`;
-    const r = await fetch(url + bust, { cache:"no-store" });
+    const r = await fetch(url + `?v=${Date.now()}`, { cache:"no-store" });
     if(!r.ok) throw new Error(`Fetch ${url} failed: ${r.status}`);
     return await r.json();
   }
@@ -216,7 +277,7 @@
     c.height = Math.round(r.height * k);
   }
 
-  function to6hSeries(series){
+  function to6h(series){
     const out = [];
     for(const p of (series || [])){
       const t = parseLabel(p.label);
@@ -224,7 +285,7 @@
       const y = +p.value;
       if(!isFinite(y)) continue;
       out.push({
-        x: (t.dd - 1) + (t.hh / 24),
+        x: (t.dd - 1) + (t.hh/24),
         y, dd:t.dd, mm:t.mm, hh:t.hh,
         label:p.label
       });
@@ -234,96 +295,45 @@
   }
 
   function lastPoint(series){
-    const s = to6hSeries(series);
+    const s = to6h(series);
     return s.length ? s[s.length-1] : null;
   }
 
-  let hoverBound = false;
-  function bindHover(){
-    if(hoverBound) return;
-    hoverBound = true;
-
-    wrap.addEventListener("mousemove", (ev) => {
-      const k = dpr();
-      const rect = wrap.getBoundingClientRect();
-      const mx = (ev.clientX - rect.left) * k;
-
-      const pts = window.__mw_pts || [];
-      const xs  = window.__mw_xs  || [];
-      if(!pts.length){ tip.style.display="none"; return; }
-
-      let bi=-1, bd=Infinity;
-      for(let i=0;i<xs.length;i++){
-        const dist = Math.abs(xs[i] - mx);
-        if(dist < bd){ bd=dist; bi=i; }
-      }
-
-      const tol = 18*k;
-      if(bi >= 0 && bd <= tol){
-        const p = pts[bi];
-        const head = `${String(p.dd).padStart(2,"0")}.${String(p.mm).padStart(2,"0")} ${String(p.hh).padStart(2,"0")}:00`;
-        tip.style.display="block";
-        tip.textContent = `${head} – Spot: ${fmtCt(p.spotCt)} – Schätzung: ${fmtCt(p.estCt)}`;
-        tip.style.left = `${(p.px / k)}px`;
-        tip.style.top  = `${(p.py / k)}px`;
-      } else {
-        tip.style.display="none";
-      }
-    });
-
-    wrap.addEventListener("mouseleave", () => tip.style.display="none");
+  function setError(msg){
+    elErr.style.display = "block";
+    elErr.textContent = msg;
   }
 
-  function roundRect(ctx, x, y, w, h, r){
-    ctx.beginPath();
-    ctx.moveTo(x+r, y);
-    ctx.arcTo(x+w, y, x+w, y+h, r);
-    ctx.arcTo(x+w, y+h, x, y+h, r);
-    ctx.arcTo(x, y+h, x, y, r);
-    ctx.arcTo(x, y, x+w, y, r);
-    ctx.closePath();
+  function clearError(){
+    elErr.style.display = "none";
+    elErr.textContent = "";
   }
 
   function draw(current, prev){
     resize();
     ctx.setTransform(1,0,0,1,0,0);
     ctx.clearRect(0,0,c.width,c.height);
-    ctx.lineJoin="round";
-    ctx.lineCap="round";
 
     const k = dpr();
     const W = c.width, H = c.height;
 
     const css = getComputedStyle(document.documentElement);
-    const colGrid   = css.getPropertyValue("--grid").trim();
-    const colSpot   = css.getPropertyValue("--spot").trim();
-    const colEst    = css.getPropertyValue("--est").trim();
-    const colFill   = css.getPropertyValue("--estFill").trim();
-    const colMarker = css.getPropertyValue("--marker").trim();
-    const colBorder = css.getPropertyValue("--border").trim();
-    const colMuted  = css.getPropertyValue("--muted").trim();
-    const colText   = css.getPropertyValue("--text").trim();
-    const colAccent = css.getPropertyValue("--accent").trim();
+    const colGrid = css.getPropertyValue("--grid").trim();
+    const colSpot = css.getPropertyValue("--spot").trim();
+    const colEst  = css.getPropertyValue("--est").trim();
+    const colFill = css.getPropertyValue("--estFill").trim();
 
-    // Layout: Plot links, Werte rechts (im selben Canvas)
-    const padL = 18*k, padT = 14*k, padB = 30*k, padR = 18*k;
-    const labelZone = Math.round(320*k);
-    const gap = Math.round(18*k);
-
-    const plotW = W - padL - padR - labelZone - gap;
+    const padL = 18*k, padR = 14*k, padT = 12*k, padB = 30*k;
+    const plotX0 = padL, plotY0 = padT;
+    const plotW = W - padL - padR;
     const plotH = H - padT - padB;
-    const plotX0 = padL;
-    const plotY0 = padT;
-    const labelX0 = plotX0 + plotW + gap;
 
-    // Daten
-    let spot = to6hSeries(current.series_6h_spot);
-    let est  = to6hSeries(current.series_6h);
+    let spot = to6h(current.series_6h_spot);
+    let est  = to6h(current.series_6h);
 
     const prevSpotLast = lastPoint(prev.series_6h_spot);
     const prevEstLast  = lastPoint(prev.series_6h);
 
-    // Startanker (optisch)
     if(prevSpotLast && spot.length) spot = [{...prevSpotLast, x:-0.25, label:"Vormonat"}, ...spot];
     if(prevEstLast  && est.length)  est  = [{...prevEstLast,  x:-0.25, label:"Vormonat"}, ...est];
 
@@ -331,17 +341,16 @@
     const hasEst  = est.length  >= 2;
 
     if(!hasSpot && !hasEst){
-      elErr.style.display="block";
-      elErr.textContent="Keine Daten vorhanden (Spot & Schätzung leer).";
+      setError("Keine Daten vorhanden.");
       return;
     }
-    elErr.style.display="none";
+    clearError();
 
     const [yy, mm] = (current.month || "").split("-").map(Number);
-    const daysInMonth = new Date(yy, mm, 0).getDate();
+    const dim = new Date(yy, mm, 0).getDate();
 
     const xMin = -0.5;
-    const xMax = (daysInMonth - 1) + 18/24;
+    const xMax = (dim - 1) + 18/24;
 
     const yAll = []
       .concat(hasSpot ? spot.map(p=>p.y) : [])
@@ -365,13 +374,13 @@
     }
     ctx.stroke();
 
-    // Clip Plot
+    // Clip
     ctx.save();
     ctx.beginPath();
     ctx.rect(plotX0, plotY0, plotW, plotH);
     ctx.clip();
 
-    // Fläche: Schätzung
+    // Fill Schätzung
     if(hasEst){
       ctx.beginPath();
       ctx.moveTo(xToPx(est[0].x), yToPx(est[0].y));
@@ -383,7 +392,7 @@
       ctx.fill();
     }
 
-    // Spot Linie (Haupt)
+    // Spot line (primary)
     if(hasSpot){
       ctx.beginPath();
       ctx.moveTo(xToPx(spot[0].x), yToPx(spot[0].y));
@@ -393,7 +402,7 @@
       ctx.stroke();
     }
 
-    // Schätzung Linie
+    // Est line
     if(hasEst){
       ctx.beginPath();
       ctx.moveTo(xToPx(est[0].x), yToPx(est[0].y));
@@ -405,147 +414,115 @@
 
     ctx.restore();
 
-    // Marker (vertikal)
-    const dayIndex = Math.min(Math.max(0, +current.today_index || 0), daysInMonth-1);
-    const xNow = xToPx(dayIndex + 12/24);
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(plotX0, plotY0, plotW, plotH);
-    ctx.clip();
-    ctx.strokeStyle = colMarker;
-    ctx.lineWidth = 2*k;
-    ctx.beginPath();
-    ctx.moveTo(xNow, plotY0);
-    ctx.lineTo(xNow, plotY0 + plotH);
-    ctx.stroke();
-    ctx.restore();
-
-    // X-Achse Tage
-    ctx.fillStyle = colMuted;
+    // X markers
+    ctx.fillStyle = css.getPropertyValue("--muted").trim();
     ctx.font = `${11*k}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
     ctx.textAlign="center";
-    const marks = [1,8,15,22,daysInMonth].filter((v,i,a)=>a.indexOf(v)===i);
+    const marks = [1,8,15,22,dim].filter((v,i,a)=>a.indexOf(v)===i);
     for(const d of marks){
       const x = xToPx((d-1)+12/24);
       ctx.fillText(String(d).padStart(2,"0"), x, plotY0 + plotH + 18*k);
     }
 
-    // yNow (für Connector): Spot bevorzugt
-    const pickNow = (series) => {
-      for(let i=series.length-1;i>=0;i--){
-        const p = series[i];
-        if(p.label==="Vormonat") continue;
-        if(xToPx(p.x) <= xNow + 0.0001) return p;
-      }
-      return series[series.length-1];
-    };
-    const pNow = hasSpot ? pickNow(spot) : pickNow(est);
-    const yNow = yToPx(pNow.y);
-
-    // Connector: dünn, durchgehend bis vor Werte
-    const stopX = labelX0 - (12*k);
-    ctx.strokeStyle = colMarker;
-    ctx.lineWidth = 1*k;
-    ctx.beginPath();
-    ctx.moveTo(plotX0 + plotW, yNow);
-    ctx.lineTo(stopX, yNow);
-    ctx.stroke();
-
-    // Rechte Werte (clean, ohne Box)
-    const curName = monthName(current.month);
-    const prevName = monthName(prev.month);
-
-    const spotCurCt = eurMwhToCtKwh(current.estimate_spot_eur_mwh);
-    const estCurCt  = eurMwhToCtKwh(current.estimate_eur_mwh);
-
-    const prevEstCt = eurMwhToCtKwh((prev.official_available && prev.official_eur_mwh != null) ? prev.official_eur_mwh : prev.estimate_eur_mwh);
-
-    const blockTop = Math.max(plotY0 + 10*k, Math.min(plotY0 + plotH - 132*k, yNow - 64*k));
-    const xText = labelX0;
-
-    ctx.textAlign="left";
-    ctx.textBaseline="alphabetic";
-
-    // Überschrift rechts
-    ctx.fillStyle = colMuted;
-    ctx.font = `${12*k}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
-    ctx.fillText("Spot & Schätzung", xText, blockTop + 14*k);
-
-    // Spot (Haupt)
-    ctx.fillStyle = colSpot;
-    ctx.font = `${20*k}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
-    ctx.fillText(fmtCt(spotCurCt), xText, blockTop + 40*k);
-
-    ctx.fillStyle = colMuted;
-    ctx.font = `${12*k}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
-    ctx.fillText(`${curName} – Spot (Monat)`, xText, blockTop + 56*k);
-
-    // Schätzung (kleiner darunter)
-    ctx.fillStyle = colEst;
-    ctx.font = `${16*k}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
-    ctx.fillText(`${fmtCt(estCurCt)}  (Schätzung)`, xText, blockTop + 80*k);
-
-    // Trennlinie
-    const sepY = blockTop + 92*k;
-    ctx.strokeStyle = colBorder;
-    ctx.lineWidth = 1*k;
-    ctx.beginPath();
-    ctx.moveTo(xText, sepY);
-    ctx.lineTo(xText + (labelZone - 24*k), sepY);
-    ctx.stroke();
-
-    // Vormonat (Schätzung)
-    ctx.fillStyle = colAccent;
-    ctx.font = `${15*k}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
-    ctx.fillText(fmtCt(prevEstCt), xText, sepY + 28*k);
-
-    ctx.fillStyle = colMuted;
-    ctx.font = `${12*k}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
-    ctx.fillText(`${prevName} – Schätzung`, xText, sepY + 44*k);
-
-    // Hover cache: nearest X, zeigt beide Werte
-    const estMap = new Map((hasEst ? est : []).filter(p=>p.label!=="Vormonat").map(p=>[`${p.dd}-${p.mm}-${p.hh}`, p]));
+    // Hover points: nearest X, show both
+    const estMap = new Map(est.filter(p=>p.label!=="Vormonat").map(p=>[`${p.dd}-${p.mm}-${p.hh}`, p]));
     const base = (hasSpot ? spot : est).filter(p=>p.label!=="Vormonat");
 
-    const pts = base.map(p => {
-      const kkey = `${p.dd}-${p.mm}-${p.hh}`;
-      const e = estMap.get(kkey);
-
-      const spotY = hasSpot ? p.y : null;
-      const estY  = e ? e.y : null;
-      const yUse  = (spotY ?? estY);
-
+    const pts = base.map(p=>{
+      const key = `${p.dd}-${p.mm}-${p.hh}`;
+      const e = estMap.get(key);
+      const spotCt = hasSpot ? eurMwhToCtKwh(p.y) : null;
+      const estCt  = e ? eurMwhToCtKwh(e.y) : null;
+      const yUse = (hasSpot ? p.y : (e ? e.y : p.y));
       return {
-        px: xToPx(p.x),
-        py: yToPx(yUse),
+        px:xToPx(p.x),
+        py:yToPx(yUse),
         dd:p.dd, mm:p.mm, hh:p.hh,
-        spotCt: spotY != null ? eurMwhToCtKwh(spotY) : null,
-        estCt:  estY  != null ? eurMwhToCtKwh(estY)  : null,
+        spotCt, estCt
       };
     });
 
     window.__mw_pts = pts;
     window.__mw_xs  = pts.map(p=>p.px);
+
     bindHover();
+  }
+
+  let hoverBound = false;
+  function bindHover(){
+    if(hoverBound) return;
+    hoverBound = true;
+
+    box.addEventListener("mousemove", (ev) => {
+      const k = dpr();
+      const rect = box.getBoundingClientRect();
+      const mx = (ev.clientX - rect.left) * k;
+
+      const pts = window.__mw_pts || [];
+      const xs  = window.__mw_xs  || [];
+      if(!pts.length){ tip.style.display="none"; return; }
+
+      let bi=-1, bd=Infinity;
+      for(let i=0;i<xs.length;i++){
+        const d = Math.abs(xs[i]-mx);
+        if(d<bd){ bd=d; bi=i; }
+      }
+
+      const tol = 18*k;
+      if(bi>=0 && bd<=tol){
+        const p = pts[bi];
+        const head = `${String(p.dd).padStart(2,"0")}.${String(p.mm).padStart(2,"0")} ${String(p.hh).padStart(2,"0")}:00`;
+        const a = `Spot: ${fmtCt(p.spotCt)}`;
+        const b = `Marktwert: ${fmtCt(p.estCt)}`;
+        tip.textContent = `${head} – ${a} – ${b}`;
+        tip.style.display="block";
+        tip.style.left = `${(p.px / k)}px`;
+        tip.style.top  = `${(p.py / k)}px`;
+      } else {
+        tip.style.display="none";
+      }
+    });
+
+    box.addEventListener("mouseleave", ()=> tip.style.display="none");
   }
 
   async function init(){
     try{
       const [current, prev] = await Promise.all([loadJson(PATH_CURRENT), loadJson(PATH_PREV)]);
 
-      const [yy, mm] = (current.month || "").split("-").map(Number);
-      const dim = new Date(yy, mm, 0).getDate();
+      // Header (nur nutzer-relevant)
+      elSub.textContent = monthLabel(current.month);
 
-      elSub.textContent = `${current.month}-01 → ${current.month}-${String(dim).padStart(2,"0")}`;
-      elUpd.textContent = `Update: ${current.updated_utc || "–"}`;
+      // KPI Werte
+      const spotCt = eurMwhToCtKwh(current.estimate_spot_eur_mwh);
+      const estCt  = eurMwhToCtKwh(current.estimate_eur_mwh);
+
+      const prevEstCt = eurMwhToCtKwh(
+        (prev.official_available && prev.official_eur_mwh != null) ? prev.official_eur_mwh : prev.estimate_eur_mwh
+      );
+
+      elKpiSpot.textContent = fmtCt(spotCt);
+      elKpiSpotSub.textContent = `${monthLabel(current.month)} – Spot`;
+
+      elKpiEst.textContent = fmtCt(estCt);
+      elKpiEstSub.textContent = `${monthLabel(current.month)} – Schätzung`;
+
+      // Delta (Schätzung vs Vormonat-Schätzung)
+      if(estCt != null && prevEstCt != null){
+        const d = estCt - prevEstCt;
+        const arrow = d > 0 ? "↑" : (d < 0 ? "↓" : "→");
+        elKpiDelta.textContent = `${arrow} ${fmtCt(Math.abs(d))} zum Vormonat`;
+        elKpiPrev.textContent  = `Vormonat: ${fmtCt(prevEstCt)} (${monthLabel(prev.month)})`;
+      } else {
+        elKpiDelta.textContent = "–";
+        elKpiPrev.textContent  = `Vormonat: ${fmtCt(prevEstCt)} (${monthLabel(prev.month)})`;
+      }
 
       draw(current, prev);
       window.addEventListener("resize", () => draw(current, prev));
-      window.addEventListener("focus",  () => draw(current, prev));
     } catch(e){
-      elErr.style.display="block";
-      elErr.textContent = "Fehler beim Laden der JSON: " + (e?.message || e);
+      setError("Fehler beim Laden der Daten.");
+      console.error(e);
     }
   }
 
