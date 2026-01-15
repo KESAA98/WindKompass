@@ -1,254 +1,34 @@
-#!/usr/bin/env python3
-# scripts/update_prices.py
-#
-# Erstellt (Berlin-Zeit):
-# - data/price_current_month.json  (1. .. heute, 6h-Serie + laufende Schätzung)
-# - data/price_prev_month.json     (Vormonat komplett, 6h-Serie + "estimate", später official)
-#
-# Quelle: Energy-Charts Day-Ahead prices (BZN=DE-LU)
+name: Update price JSON
 
-import json
-import urllib.request
-from dataclasses import dataclass
-from datetime import datetime, date, timezone, timedelta
-from calendar import monthrange
-from zoneinfo import ZoneInfo
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+on:
+  schedule:
+    - cron: "0 */6 * * *"  # alle 6 Stunden
+  workflow_dispatch:
 
-BZN = "DE-LU"
-TZ = ZoneInfo("Europe/Berlin")
-OUT_DIR = Path("data")
-OUT_DIR.mkdir(parents=True, exist_ok=True)
+permissions:
+  contents: write
 
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-def fetch_json(url: str) -> Dict[str, Any]:
-    req = urllib.request.Request(
-        url,
-        headers={
-            "User-Agent": "github-actions (price updater)",
-            "Accept": "application/json",
-        },
-    )
-    with urllib.request.urlopen(req, timeout=45) as r:
-        return json.loads(r.read().decode("utf-8"))
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
 
+      - name: Run updater
+        run: |
+          python scripts/update_prices.py
 
-def iso(d: date) -> str:
-    return d.strftime("%Y-%m-%d")
-
-
-def month_start_end_local(year: int, month: int) -> Tuple[datetime, datetime]:
-    last = monthrange(year, month)[1]
-    start = datetime(year, month, 1, 0, 0, 0, tzinfo=TZ)
-    end = datetime(year, month, last, 23, 59, 59, tzinfo=TZ)
-    return start, end
-
-
-def prev_month(year: int, month: int) -> Tuple[int, int]:
-    if month == 1:
-        return year - 1, 12
-    return year, month - 1
-
-
-@dataclass
-class Bucket:
-    ts: int                 # epoch seconds of a representative time (Berlin)
-    label: str              # "dd.mm HH:00"
-    value: float            # avg price in bucket
-    day_key: str            # "dd.mm" for grouping
-
-
-def group_to_6h_berlin(unix_seconds: List[int], prices: List[Any],
-                      month_start: datetime,
-                      month_end: datetime,
-                      cut_after: Optional[datetime] = None) -> List[Bucket]:
-    """
-    - Gruppiert stündliche Werte in 6h-Buckets nach Berlin-Zeit.
-    - Filtert strikt auf [month_start, month_end].
-    - Optional: cut_after -> alles nach diesem Zeitpunkt wird verworfen (für "aktueller Monat bis heute").
-    """
-    buckets: Dict[Tuple[int, int, int, int], Tuple[float, int, datetime]] = {}
-
-    for u, p in zip(unix_seconds, prices):
-        try:
-            pv = float(p)
-        except Exception:
-            continue
-
-        dt_utc = datetime.fromtimestamp(int(u), tz=timezone.utc)
-        dt_loc = dt_utc.astimezone(TZ)
-
-        if dt_loc < month_start or dt_loc > month_end:
-            continue
-        if cut_after is not None and dt_loc > cut_after:
-            continue
-
-        block = dt_loc.hour // 6  # 0..3 (00,06,12,18)
-        key = (dt_loc.year, dt_loc.month, dt_loc.day, block)
-
-        if key not in buckets:
-            buckets[key] = (pv, 1, dt_loc)
-        else:
-            s, n, rep = buckets[key]
-            buckets[key] = (s + pv, n + 1, rep)
-
-    out: List[Bucket] = []
-    for (y, m, d, block), (s, n, rep) in buckets.items():
-        hh = block * 6
-        label = f"{d:02d}.{m:02d} {hh:02d}:00"
-        day_key = f"{d:02d}.{m:02d}"
-        out.append(Bucket(
-            ts=int(rep.timestamp()),
-            label=label,
-            value=s / max(n, 1),
-            day_key=day_key,
-        ))
-
-    out.sort(key=lambda x: x.ts)
-    return out
-
-
-def avg(vals: List[float]) -> Optional[float]:
-    xs = [v for v in vals if isinstance(v, (int, float)) and v == v]
-    return (sum(xs) / len(xs)) if xs else None
-
-
-def estimate_from_buckets(buckets: List[Bucket], today_local: datetime,
-                          days_in_month: int) -> Tuple[Optional[float], int, Optional[float], Optional[float]]:
-    """
-    Liefert:
-      estimate, today_index, mean_so_far, rest_estimator
-    Schätzung = Mix aus:
-      mean_so_far (bis heute) + rest_estimator (Ø letzte 7 Tage) gewichtet nach Monatsfortschritt.
-    """
-    if not buckets:
-        return None, 0, None, None
-
-    # today_index = erster Bucket des heutigen Tages (Berlin)
-    today_key = f"{today_local.day:02d}.{today_local.month:02d}"
-    today_index = next((i for i, b in enumerate(buckets) if b.day_key == today_key), len(buckets) - 1)
-
-    so_far_vals = [b.value for b in buckets[: max(1, today_index + 1)]]
-    mean_so_far = avg(so_far_vals)
-
-    # letzte 7 UNIQUE Tage in buckets (bis heute)
-    seen: List[str] = []
-    seen_set = set()
-    for b in buckets[: max(1, today_index + 1)]:
-        if b.day_key not in seen_set:
-            seen_set.add(b.day_key)
-            seen.append(b.day_key)
-    last7_days = seen[-7:]
-    last7_vals = [b.value for b in buckets if b.day_key in last7_days]
-    rest_estimator = avg(last7_vals)
-
-    # Fortschritt im Monat (0..1). Am 1. ist ~0, am letzten Tag ~1.
-    part = max(0.0, min(1.0, (today_local.day - 1) / float(max(days_in_month, 1))))
-
-    if mean_so_far is not None and rest_estimator is not None:
-        est = mean_so_far * part + rest_estimator * (1.0 - part)
-    else:
-        est = mean_so_far
-
-    return est, int(today_index), mean_so_far, rest_estimator
-
-
-def build_month_payload(year: int, month: int, mode: str) -> Dict[str, Any]:
-    """
-    mode:
-      - "current": liefert 1..heute (cut_after=now Berlin), inkl. Schätzung.
-      - "prev": kompletter Vormonat, estimate = Ø des Monats (Schätzung), official placeholder.
-    """
-    month_start, month_end = month_start_end_local(year, month)
-
-    # Energy-Charts API (ISO-Daten)
-    url = f"https://api.energy-charts.info/price?bzn={BZN}&start={iso(month_start.date())}&end={iso(month_end.date())}"
-    j = fetch_json(url)
-
-    unix_seconds = j.get("unix_seconds") or []
-    prices = j.get("price") or []
-    if not isinstance(unix_seconds, list) or not isinstance(prices, list):
-        raise RuntimeError("Unerwartetes API-Format: unix_seconds/price fehlen oder sind nicht listenfähig.")
-
-    now_loc = datetime.now(TZ)
-    cut_after = now_loc if mode == "current" else None
-
-    buckets = group_to_6h_berlin(
-        unix_seconds=unix_seconds,
-        prices=prices,
-        month_start=month_start,
-        month_end=month_end,
-        cut_after=cut_after,
-    )
-
-    days_in_month = monthrange(year, month)[1]
-
-    if mode == "current":
-        est, today_index, mean_so_far, rest_estimator = estimate_from_buckets(
-            buckets=buckets,
-            today_local=now_loc,
-            days_in_month=days_in_month,
-        )
-        payload = {
-            "updated_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-            "bzn": BZN,
-            "tz": "Europe/Berlin",
-            "month": f"{year:04d}-{month:02d}",
-            "range": {
-                "start": iso(month_start.date()),
-                "end": iso(month_end.date()),
-                "cut_after_local": now_loc.isoformat(),
-            },
-            "estimate_eur_mwh": round(est, 2) if est is not None else None,
-            "today_index": today_index,
-            "debug": {
-                "mean_so_far_eur_mwh": round(mean_so_far, 2) if mean_so_far is not None else None,
-                "rest_estimator_last7d_eur_mwh": round(rest_estimator, 2) if rest_estimator is not None else None,
-                "bucket_count": len(buckets),
-            },
-            "series_6h": [{"label": b.label, "value": round(b.value, 2)} for b in buckets],
-        }
-        return payload
-
-    # mode == "prev"
-    # "Schätzung" = Monatsmittel (aus 6h-Buckets)
-    mean_month = avg([b.value for b in buckets])
-    payload = {
-        "updated_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-        "bzn": BZN,
-        "tz": "Europe/Berlin",
-        "month": f"{year:04d}-{month:02d}",
-        "estimate_eur_mwh": round(mean_month, 2) if mean_month is not None else None,
-
-        # Offiziell (später per Netztransparenz-WebAPI befüllen)
-        "official_eur_mwh": None,
-        "official_available": False,
-        "official_checked_utc": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-
-        "series_6h": [{"label": b.label, "value": round(b.value, 2)} for b in buckets],
-    }
-    return payload
-
-
-def main() -> None:
-    now = datetime.now(TZ)
-    y, m = now.year, now.month
-    py, pm = prev_month(y, m)
-
-    current = build_month_payload(y, m, mode="current")
-    prev = build_month_payload(py, pm, mode="prev")
-
-    # Schreiben
-    (OUT_DIR / "price_current_month.json").write_text(
-        json.dumps(current, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    (OUT_DIR / "price_prev_month.json").write_text(
-        json.dumps(prev, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-
-
-if __name__ == "__main__":
-    main()
+      - name: Commit & push (if changed)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/price_current_month.json data/price_prev_month.json
+          git diff --cached --quiet && exit 0
+          git commit -m "Update price JSON"
+          git push
