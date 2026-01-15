@@ -6,70 +6,111 @@
   <title>Monatsmarktwert – Spot & Schätzung</title>
   <style>
     :root{
-      --bg:#ffffff;
+      --bg:#f6f8fb;
       --card:#ffffff;
-      --border:#e9eef3;
+      --border:#e7edf3;
       --text:#0f172a;
       --muted:#64748b;
-      --grid:#eef2f6;
+      --grid:#eef3f7;
 
-      --spot:#94a3b8;         /* Spot (Day-Ahead) */
+      --spot:#64748b;         /* Spot (Day-Ahead) */
       --est:#22c55e;          /* Schätzung (gewichtet) */
       --estFill: rgba(34,197,94,.10);
 
       --marker:#cbd5e1;
-      --valueBlue:#2563eb;
+      --accent:#2563eb;
 
       --tooltipBg:#0f172a;
       --tooltipText:#ffffff;
-
-      --chartCardBg:#ffffff;
     }
 
+    *{box-sizing:border-box}
     body{
-      margin:0; background:var(--bg); color:var(--text);
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     }
-    .wrap{max-width:1100px; margin:24px auto; padding:0 16px;}
+    .wrap{max-width:1120px; margin:28px auto; padding:0 16px;}
 
-    .panel{
+    /* EIN Container für alles */
+    .card{
       background:var(--card);
       border:1px solid var(--border);
-      border-radius:14px;
-      padding:14px;
-      position:relative;
+      border-radius:16px;
+      box-shadow:0 10px 28px rgba(15,23,42,.06);
+      padding:18px;
     }
-    .panelHead{
+
+    .head{
       display:flex;
-      align-items:baseline;
+      align-items:flex-start;
       justify-content:space-between;
       gap:16px;
       margin-bottom:10px;
     }
-    .panelHead h1{font-size:18px; margin:0; font-weight:700;}
-    .sub{font-size:12px; color:var(--muted);}
-
-    /* eigener Chart-Container wie äußere Card */
-    .chartCard{
-      background:var(--chartCardBg);
-      border:1px solid var(--border);
-      border-radius:14px;
-      padding:12px;
-      box-shadow:0 1px 0 rgba(15,23,42,.03);
+    .title{
+      font-size:18px;
+      font-weight:750;
+      margin:0;
+      letter-spacing:.2px;
+    }
+    .meta{
+      font-size:12px;
+      color:var(--muted);
+      margin-top:4px;
+    }
+    .updated{
+      font-size:12px;
+      color:var(--muted);
+      white-space:nowrap;
+      padding-top:4px;
     }
 
-    .canvasWrap{
+    .chartWrap{
       position:relative;
-      border-radius:12px;
+      border-radius:14px;
       overflow:hidden;
-      background:#fff;
+      background:linear-gradient(180deg,#fbfdff, #ffffff);
+      border:1px solid var(--border);
+      padding:10px;
     }
     canvas{width:100%; height:360px; display:block;}
 
-    .hint{margin-top:10px; font-size:12px; color:var(--muted);}
+    .footer{
+      margin-top:10px;
+      display:flex;
+      gap:12px;
+      align-items:flex-start;
+      justify-content:space-between;
+      flex-wrap:wrap;
+    }
+    .legend{
+      display:flex;
+      gap:14px;
+      align-items:center;
+      color:var(--muted);
+      font-size:12px;
+    }
+    .dot{
+      width:10px; height:10px; border-radius:999px; display:inline-block;
+      margin-right:8px; transform:translateY(1px);
+    }
+    .hint{
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.35;
+      max-width:820px;
+    }
+
     .err{
-      margin-top:10px; padding:10px 12px; border-radius:10px;
-      background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; font-size:12px;
+      margin-top:12px;
+      padding:10px 12px;
+      border-radius:12px;
+      background:#fff7ed;
+      border:1px solid #fed7aa;
+      color:#9a3412;
+      font-size:12px;
       display:none;
     }
 
@@ -79,11 +120,11 @@
       transform:translate(-50%, calc(-100% - 10px));
       background:var(--tooltipBg);
       color:var(--tooltipText);
-      padding:6px 8px;
-      border-radius:8px;
+      padding:7px 9px;
+      border-radius:10px;
       font-size:12px;
       white-space:nowrap;
-      box-shadow:0 6px 18px rgba(0,0,0,.14);
+      box-shadow:0 10px 26px rgba(0,0,0,.18);
       display:none;
       z-index:5;
     }
@@ -100,26 +141,30 @@
 </head>
 <body>
   <div class="wrap">
-    <div class="panel">
-      <div class="panelHead">
+    <div class="card">
+      <div class="head">
         <div>
-          <h1>Monatsmarktwert Wind Onshore – Spot & Schätzung</h1>
-          <div class="sub" id="subline">–</div>
+          <h1 class="title">Monatsmarktwert Wind Onshore – Spot & Schätzung</h1>
+          <div class="meta" id="subline">–</div>
         </div>
-        <div class="sub" id="updated">–</div>
+        <div class="updated" id="updated">–</div>
       </div>
 
-      <div class="chartCard">
-        <div class="canvasWrap" id="canvasWrap">
-          <canvas id="chart"></canvas>
-          <div class="tip" id="tip"></div>
-        </div>
+      <div class="chartWrap" id="canvasWrap">
+        <canvas id="chart"></canvas>
+        <div class="tip" id="tip"></div>
       </div>
 
       <div class="err" id="err"></div>
 
-      <div class="hint">
-        Hinweis: Schätzung = Spotmarktpreis (Energy-Charts) gewichtet mit Wind-Onshore-Erzeugung (SMARD).
+      <div class="footer">
+        <div class="legend">
+          <span><span class="dot" style="background:var(--spot)"></span>Spot (Day-Ahead)</span>
+          <span><span class="dot" style="background:var(--est)"></span>Schätzung (gewichtet)</span>
+        </div>
+        <div class="hint">
+          Hinweis: Schätzung = Spotmarktpreis (Energy-Charts) gewichtet mit Wind-Onshore-Erzeugung (SMARD).
+        </div>
       </div>
     </div>
   </div>
@@ -139,18 +184,17 @@
   const c = document.getElementById("chart");
   const ctx = c.getContext("2d");
 
-  const getDpr = () => Math.max(1, window.devicePixelRatio || 1);
+  const dpr = () => Math.max(1, window.devicePixelRatio || 1);
 
   const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
-  function monthName(yyyyMm){
+  const monthName = (yyyyMm) => {
     const [y,m] = (yyyyMm || "").split("-").map(Number);
     if(!y || !m) return "–";
     return `${MONTHS[m-1]} ${y}`;
-  }
+  };
 
-  // €/MWh -> ct/kWh
   const eurMwhToCtKwh = (v) => (v == null || !isFinite(v) ? null : v * 0.1);
-  const fmtCtKwh = (vCt) => (vCt == null || !isFinite(vCt) ? "–" : `${vCt.toFixed(2).replace(".", ",")} ct/kWh`);
+  const fmtCt = (v) => (v == null || !isFinite(v) ? "–" : `${v.toFixed(2).replace(".", ",")} ct/kWh`);
 
   function parseLabel(label){
     const m = (label || "").match(/^(\d{2})\.(\d{2})\s+(\d{2}):00$/);
@@ -165,10 +209,11 @@
     return await r.json();
   }
 
-  function resize(dpr){
-    const rect = c.getBoundingClientRect();
-    c.width  = Math.round(rect.width * dpr);
-    c.height = Math.round(rect.height * dpr);
+  function resize(){
+    const r = c.getBoundingClientRect();
+    const k = dpr();
+    c.width  = Math.round(r.width  * k);
+    c.height = Math.round(r.height * k);
   }
 
   function to6hSeries(series){
@@ -193,100 +238,104 @@
     return s.length ? s[s.length-1] : null;
   }
 
-  // Hover: nearest X + Toleranz (in px)
   let hoverBound = false;
   function bindHover(){
     if(hoverBound) return;
     hoverBound = true;
 
     wrap.addEventListener("mousemove", (ev) => {
-      const dpr = getDpr();
+      const k = dpr();
       const rect = wrap.getBoundingClientRect();
-      const mx = (ev.clientX - rect.left) * dpr;
+      const mx = (ev.clientX - rect.left) * k;
 
-      const pts = window.__mw_points || [];
-      const xPx = window.__mw_xpx || [];
-      if(!pts.length){
-        tip.style.display = "none";
-        return;
+      const pts = window.__mw_pts || [];
+      const xs  = window.__mw_xs  || [];
+      if(!pts.length){ tip.style.display="none"; return; }
+
+      let bi=-1, bd=Infinity;
+      for(let i=0;i<xs.length;i++){
+        const dist = Math.abs(xs[i] - mx);
+        if(dist < bd){ bd=dist; bi=i; }
       }
 
-      let bestIdx = -1, bestDist = Infinity;
-      for(let i=0;i<xPx.length;i++){
-        const dist = Math.abs(xPx[i] - mx);
-        if(dist < bestDist){ bestDist = dist; bestIdx = i; }
-      }
-
-      const tol = 18 * dpr;
-      if(bestIdx >= 0 && bestDist <= tol){
-        const p = pts[bestIdx];
+      const tol = 18*k;
+      if(bi >= 0 && bd <= tol){
+        const p = pts[bi];
         const head = `${String(p.dd).padStart(2,"0")}.${String(p.mm).padStart(2,"0")} ${String(p.hh).padStart(2,"0")}:00`;
-        tip.style.display = "block";
-        tip.textContent = `${head} – Spot: ${fmtCtKwh(p.spotCt)} – Schätzung: ${fmtCtKwh(p.estCt)}`;
-        tip.style.left = `${(p.px / dpr)}px`;
-        tip.style.top  = `${(p.py / dpr)}px`;
-      }else{
-        tip.style.display = "none";
+        tip.style.display="block";
+        tip.textContent = `${head} – Spot: ${fmtCt(p.spotCt)} – Schätzung: ${fmtCt(p.estCt)}`;
+        tip.style.left = `${(p.px / k)}px`;
+        tip.style.top  = `${(p.py / k)}px`;
+      } else {
+        tip.style.display="none";
       }
     });
 
-    wrap.addEventListener("mouseleave", () => tip.style.display = "none");
+    wrap.addEventListener("mouseleave", () => tip.style.display="none");
+  }
+
+  function roundRect(ctx, x, y, w, h, r){
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.arcTo(x+w, y, x+w, y+h, r);
+    ctx.arcTo(x+w, y+h, x, y+h, r);
+    ctx.arcTo(x, y+h, x, y, r);
+    ctx.arcTo(x, y, x+w, y, r);
+    ctx.closePath();
   }
 
   function draw(current, prev){
-    const dpr = getDpr();
-    resize(dpr);
-
+    resize();
     ctx.setTransform(1,0,0,1,0,0);
     ctx.clearRect(0,0,c.width,c.height);
-    ctx.lineJoin = "round";
-    ctx.lineCap  = "round";
+    ctx.lineJoin="round";
+    ctx.lineCap="round";
 
+    const k = dpr();
     const W = c.width, H = c.height;
-
-    // Layout
-    const padL = 18*dpr, padT = 14*dpr, padB = 30*dpr, padR = 18*dpr;
-
-    // Rechts: Textzone (ohne Box)
-    const labelZone = Math.round(300 * dpr);
-    const gapToLabel = Math.round(16 * dpr);
-
-    const plotW = W - padL - padR - labelZone - gapToLabel;
-    const plotH = H - padT - padB;
-    const plotX0 = padL;
-    const plotY0 = padT;
-    const labelX0 = plotX0 + plotW + gapToLabel;
 
     const css = getComputedStyle(document.documentElement);
     const colGrid   = css.getPropertyValue("--grid").trim();
     const colSpot   = css.getPropertyValue("--spot").trim();
     const colEst    = css.getPropertyValue("--est").trim();
-    const colEstF   = css.getPropertyValue("--estFill").trim();
+    const colFill   = css.getPropertyValue("--estFill").trim();
     const colMarker = css.getPropertyValue("--marker").trim();
     const colBorder = css.getPropertyValue("--border").trim();
     const colMuted  = css.getPropertyValue("--muted").trim();
-    const colBlue   = css.getPropertyValue("--valueBlue").trim();
+    const colText   = css.getPropertyValue("--text").trim();
+    const colAccent = css.getPropertyValue("--accent").trim();
+
+    // Layout: Plot links, Werte rechts (im selben Canvas)
+    const padL = 18*k, padT = 14*k, padB = 30*k, padR = 18*k;
+    const labelZone = Math.round(320*k);
+    const gap = Math.round(18*k);
+
+    const plotW = W - padL - padR - labelZone - gap;
+    const plotH = H - padT - padB;
+    const plotX0 = padL;
+    const plotY0 = padT;
+    const labelX0 = plotX0 + plotW + gap;
 
     // Daten
     let spot = to6hSeries(current.series_6h_spot);
     let est  = to6hSeries(current.series_6h);
 
-    // Startanker (Vormonat)
     const prevSpotLast = lastPoint(prev.series_6h_spot);
     const prevEstLast  = lastPoint(prev.series_6h);
 
-    if(prevSpotLast && spot.length) spot = [{...prevSpotLast, x:-0.25, label:"Vormonat"} , ...spot];
-    if(prevEstLast  && est.length)  est  = [{...prevEstLast,  x:-0.25, label:"Vormonat"} , ...est];
+    // Startanker (optisch)
+    if(prevSpotLast && spot.length) spot = [{...prevSpotLast, x:-0.25, label:"Vormonat"}, ...spot];
+    if(prevEstLast  && est.length)  est  = [{...prevEstLast,  x:-0.25, label:"Vormonat"}, ...est];
 
     const hasSpot = spot.length >= 2;
-    const hasEst  = est.length >= 2;
+    const hasEst  = est.length  >= 2;
 
     if(!hasSpot && !hasEst){
-      elErr.style.display = "block";
-      elErr.textContent = "Keine Daten: series_6h (Schätzung) und series_6h_spot (Spot) sind leer.";
+      elErr.style.display="block";
+      elErr.textContent="Keine Daten vorhanden (Spot & Schätzung leer).";
       return;
     }
-    elErr.style.display = "none";
+    elErr.style.display="none";
 
     const [yy, mm] = (current.month || "").split("-").map(Number);
     const daysInMonth = new Date(yy, mm, 0).getDate();
@@ -294,7 +343,6 @@
     const xMin = -0.5;
     const xMax = (daysInMonth - 1) + 18/24;
 
-    // y-range über beide Serien
     const yAll = []
       .concat(hasSpot ? spot.map(p=>p.y) : [])
       .concat(hasEst  ? est.map(p=>p.y)  : []);
@@ -307,7 +355,7 @@
     const yToPx = y => plotY0 + (yMax - y) / (yMax - yMin) * plotH;
 
     // Grid
-    ctx.lineWidth = 1*dpr;
+    ctx.lineWidth = 1*k;
     ctx.strokeStyle = colGrid;
     ctx.beginPath();
     for(let i=0;i<=4;i++){
@@ -317,13 +365,13 @@
     }
     ctx.stroke();
 
-    // Clip plot area
+    // Clip Plot
     ctx.save();
     ctx.beginPath();
     ctx.rect(plotX0, plotY0, plotW, plotH);
     ctx.clip();
 
-    // Fläche: Schätzung (grün) – immer sichtbar wie gewünscht
+    // Fläche: Schätzung
     if(hasEst){
       ctx.beginPath();
       ctx.moveTo(xToPx(est[0].x), yToPx(est[0].y));
@@ -331,33 +379,33 @@
       ctx.lineTo(xToPx(est[est.length-1].x), plotY0 + plotH);
       ctx.lineTo(xToPx(est[0].x), plotY0 + plotH);
       ctx.closePath();
-      ctx.fillStyle = colEstF;
+      ctx.fillStyle = colFill;
       ctx.fill();
     }
 
-    // Spot: Hauptlinie (grau)
+    // Spot Linie (Haupt)
     if(hasSpot){
       ctx.beginPath();
       ctx.moveTo(xToPx(spot[0].x), yToPx(spot[0].y));
       for(const p of spot) ctx.lineTo(xToPx(p.x), yToPx(p.y));
       ctx.strokeStyle = colSpot;
-      ctx.lineWidth = 2*dpr;
+      ctx.lineWidth = 2*k;
       ctx.stroke();
     }
 
-    // Schätzung: Linie (grün)
+    // Schätzung Linie
     if(hasEst){
       ctx.beginPath();
       ctx.moveTo(xToPx(est[0].x), yToPx(est[0].y));
       for(const p of est) ctx.lineTo(xToPx(p.x), yToPx(p.y));
       ctx.strokeStyle = colEst;
-      ctx.lineWidth = 2*dpr;
+      ctx.lineWidth = 2*k;
       ctx.stroke();
     }
 
     ctx.restore();
 
-    // Marker (vertikal) im Plot
+    // Marker (vertikal)
     const dayIndex = Math.min(Math.max(0, +current.today_index || 0), daysInMonth-1);
     const xNow = xToPx(dayIndex + 12/24);
 
@@ -366,133 +414,119 @@
     ctx.rect(plotX0, plotY0, plotW, plotH);
     ctx.clip();
     ctx.strokeStyle = colMarker;
-    ctx.lineWidth = 2*dpr;
+    ctx.lineWidth = 2*k;
     ctx.beginPath();
     ctx.moveTo(xNow, plotY0);
     ctx.lineTo(xNow, plotY0 + plotH);
     ctx.stroke();
     ctx.restore();
 
-    // Linke Überschrift (oben links)
-    ctx.textAlign = "left";
-    ctx.textBaseline = "alphabetic";
-    ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+    // X-Achse Tage
+    ctx.fillStyle = colMuted;
+    ctx.font = `${11*k}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+    ctx.textAlign="center";
+    const marks = [1,8,15,22,daysInMonth].filter((v,i,a)=>a.indexOf(v)===i);
+    for(const d of marks){
+      const x = xToPx((d-1)+12/24);
+      ctx.fillText(String(d).padStart(2,"0"), x, plotY0 + plotH + 18*k);
+    }
 
-    ctx.fillStyle = colSpot;
-    ctx.fillText("Spot (Day-Ahead)", plotX0 + 10*dpr, plotY0 + 18*dpr);
-
-    ctx.fillStyle = colEst;
-    ctx.fillText("Schätzung (gewichtet)", plotX0 + 10*dpr, plotY0 + 34*dpr);
-
-    // yNow für Connector: nutze Spot, sonst Schätzung
-    function lastBefore(series){
+    // yNow (für Connector): Spot bevorzugt
+    const pickNow = (series) => {
       for(let i=series.length-1;i>=0;i--){
         const p = series[i];
-        if(p.label === "Vormonat") continue;
+        if(p.label==="Vormonat") continue;
         if(xToPx(p.x) <= xNow + 0.0001) return p;
       }
       return series[series.length-1];
-    }
-    const pNow = hasSpot ? lastBefore(spot) : lastBefore(est);
+    };
+    const pNow = hasSpot ? pickNow(spot) : pickNow(est);
     const yNow = yToPx(pNow.y);
 
-    // Connector: dünn, durchgehend vom Plot-RAND bis vor Textzone
-    const stopX = labelX0 - (10*dpr);
+    // Connector: dünn, durchgehend bis vor Werte
+    const stopX = labelX0 - (12*k);
     ctx.strokeStyle = colMarker;
-    ctx.lineWidth = 1*dpr;
+    ctx.lineWidth = 1*k;
     ctx.beginPath();
     ctx.moveTo(plotX0 + plotW, yNow);
     ctx.lineTo(stopX, yNow);
     ctx.stroke();
 
-    // Rechts: Text (ohne Kasten) + Trennlinie
+    // Rechte Werte (clean, ohne Box)
     const curName = monthName(current.month);
     const prevName = monthName(prev.month);
 
-    const estCurCt = eurMwhToCtKwh(current.estimate_eur_mwh);
-    const prevIsOfficial = !!prev.official_available && prev.official_eur_mwh != null;
-    const prevValCt = eurMwhToCtKwh(prevIsOfficial ? prev.official_eur_mwh : prev.estimate_eur_mwh);
-
     const spotCurCt = eurMwhToCtKwh(current.estimate_spot_eur_mwh);
-    const spotPrevCt = eurMwhToCtKwh(prev.estimate_spot_eur_mwh);
+    const estCurCt  = eurMwhToCtKwh(current.estimate_eur_mwh);
 
-    const blockTop = Math.max(plotY0 + 10*dpr, Math.min(plotY0 + plotH - 110*dpr, yNow - 55*dpr));
+    const prevEstCt = eurMwhToCtKwh((prev.official_available && prev.official_eur_mwh != null) ? prev.official_eur_mwh : prev.estimate_eur_mwh);
+
+    const blockTop = Math.max(plotY0 + 10*k, Math.min(plotY0 + plotH - 132*k, yNow - 64*k));
     const xText = labelX0;
 
-    ctx.textAlign = "left";
-    ctx.textBaseline = "alphabetic";
+    ctx.textAlign="left";
+    ctx.textBaseline="alphabetic";
 
-    // Rechts Überschrift
+    // Überschrift rechts
     ctx.fillStyle = colMuted;
-    ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
-    ctx.fillText("Schätzung Marktpreis", xText, blockTop + 14*dpr);
+    ctx.font = `${12*k}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+    ctx.fillText("Spot & Schätzung", xText, blockTop + 14*k);
 
-    // Aktueller Monat (Schätzung)
+    // Spot (Haupt)
+    ctx.fillStyle = colSpot;
+    ctx.font = `${20*k}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+    ctx.fillText(fmtCt(spotCurCt), xText, blockTop + 40*k);
+
+    ctx.fillStyle = colMuted;
+    ctx.font = `${12*k}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+    ctx.fillText(`${curName} – Spot (Monat)`, xText, blockTop + 56*k);
+
+    // Schätzung (kleiner darunter)
     ctx.fillStyle = colEst;
-    ctx.font = `${18*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
-    ctx.fillText(fmtCtKwh(estCurCt), xText, blockTop + 38*dpr);
-
-    ctx.fillStyle = colMuted;
-    ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
-    ctx.fillText(curName, xText, blockTop + 54*dpr);
+    ctx.font = `${16*k}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+    ctx.fillText(`${fmtCt(estCurCt)}  (Schätzung)`, xText, blockTop + 80*k);
 
     // Trennlinie
-    const sepY = blockTop + 68*dpr;
+    const sepY = blockTop + 92*k;
     ctx.strokeStyle = colBorder;
-    ctx.lineWidth = 1*dpr;
+    ctx.lineWidth = 1*k;
     ctx.beginPath();
     ctx.moveTo(xText, sepY);
-    ctx.lineTo(xText + (labelZone - 20*dpr), sepY);
+    ctx.lineTo(xText + (labelZone - 24*k), sepY);
     ctx.stroke();
 
     // Vormonat (Schätzung)
-    ctx.fillStyle = colBlue;
-    ctx.font = `${16*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
-    ctx.fillText(fmtCtKwh(prevValCt), xText, sepY + 28*dpr);
+    ctx.fillStyle = colAccent;
+    ctx.font = `${15*k}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+    ctx.fillText(fmtCt(prevEstCt), xText, sepY + 28*k);
 
     ctx.fillStyle = colMuted;
-    ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
-    ctx.fillText(prevIsOfficial ? `${prevName} (offiziell)` : prevName, xText, sepY + 44*dpr);
+    ctx.font = `${12*k}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+    ctx.fillText(`${prevName} – Schätzung`, xText, sepY + 44*k);
 
-    // Spot Monatsmittel (klein, unterhalb)
-    ctx.fillStyle = colSpot;
-    ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
-    const spotLine = `Spot (Monat): ${fmtCtKwh(spotCurCt)}  |  Vormonat: ${fmtCtKwh(spotPrevCt)}`;
-    ctx.fillText(spotLine, xText, sepY + 64*dpr);
-
-    // X-Achse Marks
-    ctx.fillStyle = colMuted;
-    ctx.font = `${11*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
-    ctx.textAlign = "center";
-    const marks = [1, 8, 15, 22, daysInMonth].filter((v,i,a)=>a.indexOf(v)===i);
-    for(const d of marks){
-      const x = xToPx((d-1) + 12/24);
-      ctx.fillText(String(d).padStart(2,"0"), x, plotY0 + plotH + 18*dpr);
-    }
-
-    // Hover cache: Map (dd/mm/hh) -> est + spot
+    // Hover cache: nearest X, zeigt beide Werte
     const estMap = new Map((hasEst ? est : []).filter(p=>p.label!=="Vormonat").map(p=>[`${p.dd}-${p.mm}-${p.hh}`, p]));
-    const spotBase = (hasSpot ? spot : est).filter(p=>p.label!=="Vormonat");
+    const base = (hasSpot ? spot : est).filter(p=>p.label!=="Vormonat");
 
-    const pts = spotBase.map(p => {
-      const k = `${p.dd}-${p.mm}-${p.hh}`;
-      const e = estMap.get(k);
+    const pts = base.map(p => {
+      const kkey = `${p.dd}-${p.mm}-${p.hh}`;
+      const e = estMap.get(kkey);
 
       const spotY = hasSpot ? p.y : null;
       const estY  = e ? e.y : null;
+      const yUse  = (spotY ?? estY);
 
-      const py = yToPx((spotY ?? estY));
       return {
         px: xToPx(p.x),
-        py,
+        py: yToPx(yUse),
         dd:p.dd, mm:p.mm, hh:p.hh,
         spotCt: spotY != null ? eurMwhToCtKwh(spotY) : null,
         estCt:  estY  != null ? eurMwhToCtKwh(estY)  : null,
       };
     });
 
-    window.__mw_points = pts;
-    window.__mw_xpx = pts.map(p=>p.px);
+    window.__mw_pts = pts;
+    window.__mw_xs  = pts.map(p=>p.px);
     bindHover();
   }
 
@@ -508,9 +542,9 @@
 
       draw(current, prev);
       window.addEventListener("resize", () => draw(current, prev));
-      window.addEventListener("focus", () => draw(current, prev));
+      window.addEventListener("focus",  () => draw(current, prev));
     } catch(e){
-      elErr.style.display = "block";
+      elErr.style.display="block";
       elErr.textContent = "Fehler beim Laden der JSON: " + (e?.message || e);
     }
   }
