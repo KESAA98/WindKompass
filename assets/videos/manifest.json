@@ -2,6 +2,8 @@
   "fadeMs": 1200,
   "fadeLeadMs": 1200,
   "videos": [
-    "bg_01.mp4"
+    "bg_01.mp4",
+    "bg_02.mp4",
+    "bg_03.mp4"
   ]
 }
