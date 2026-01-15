@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WES WindKompass</title>
+
+  <link rel="stylesheet" href="assets/styles/main.css" />
+</head>
+<body>
+
+  <!-- Background Video Layer (2 videos for crossfade) -->
+  <div id="video-bg" aria-hidden="true">
+    <video id="bgA" autoplay muted playsinline preload="auto"></video>
+    <video id="bgB" autoplay muted playsinline preload="auto"></video>
+    <div class="bg-overlay"></div>
+  </div>
+
+  <!-- Icon Navigation (expands on hover / tap) -->
+  <nav id="icon-nav" aria-label="Navigation">
+    <button id="nav-toggle" class="nav-circle" aria-expanded="false" aria-controls="nav-menu">
+      <img src="assets/icons/nav_main.svg" alt="" />
+      <span class="sr-only">Navigation öffnen</span>
+    </button>
+
+    <div id="nav-menu" class="nav-menu" role="menu">
+      <button role="menuitem" data-target="overview">Übersicht</button>
+      <button role="menuitem" data-target="turbines">Windenergieanlage</button>
+      <button role="menuitem" data-target="redispatch">Redispatch</button>
+      <button role="menuitem" data-target="documents">Dokumente</button>
+    </div>
+  </nav>
+
+  <!-- Sections Stack -->
+  <main id="sections" class="sections">
+
+    <section id="overview" class="section" data-inner-scroll="false">
+      <div class="inner-container" data-load="sections/overview/content.html"></div>
+    </section>
+
+    <section id="turbines" class="section" data-inner-scroll="true">
+      <div class="inner-container" data-load="sections/turbines/content.html"></div>
+    </section>
+
+    <section id="redispatch" class="section" data-inner-scroll="false">
+      <div class="inner-container" data-load="sections/redispatch/content.html"></div>
+    </section>
+
+    <section id="documents" class="section" data-inner-scroll="true">
+      <div class="inner-container" data-load="sections/documents/content.html"></div>
+    </section>
+
+  </main>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
