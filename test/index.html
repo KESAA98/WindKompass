@@ -12,8 +12,10 @@
       --text:#0f172a;
       --muted:#64748b;
       --grid:#eef2f6;
+
       --line:#22c55e;
       --fill: rgba(34,197,94,.08);
+
       --marker:#cbd5e1;
       --valueBlue:#2563eb;
 
@@ -26,7 +28,6 @@
     }
     .wrap{max-width:1100px; margin:24px auto; padding:0 16px;}
 
-    /* Eine gemeinsame Karte (Titel + Chart + Hint) */
     .panel{
       background:var(--card);
       border:1px solid var(--border);
@@ -43,12 +44,14 @@
     }
     .panelHead h1{font-size:18px; margin:0; font-weight:700;}
     .sub{font-size:12px; color:var(--muted);}
+
     .canvasWrap{
       position:relative;
       border-radius:12px;
       overflow:hidden;
     }
     canvas{width:100%; height:360px; display:block;}
+
     .hint{margin-top:10px; font-size:12px; color:var(--muted);}
     .err{
       margin-top:10px; padding:10px 12px; border-radius:10px;
@@ -115,22 +118,24 @@
   const elSub = document.getElementById("subline");
   const elUpd = document.getElementById("updated");
   const elErr = document.getElementById("err");
+
   const wrap = document.getElementById("canvasWrap");
-  const tip = document.getElementById("tip");
+  const tip  = document.getElementById("tip");
 
   const c = document.getElementById("chart");
   const ctx = c.getContext("2d");
-  const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+
+  // DPR kann sich ändern (Browser-Zoom/Display wechseln) -> pro draw neu bestimmen
+  const getDpr = () => Math.max(1, window.devicePixelRatio || 1);
 
   const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
-
   function monthName(yyyyMm){
     const [y,m] = (yyyyMm || "").split("-").map(Number);
     if(!y || !m) return "–";
     return `${MONTHS[m-1]} ${y}`;
   }
 
-  // € / MWh -> ct / kWh  (1 €/MWh = 0.1 ct/kWh)
+  // €/MWh -> ct/kWh (1 €/MWh = 0.1 ct/kWh)
   function eurMwhToCtKwh(v){
     if (v == null || !isFinite(v)) return null;
     return v * 0.1;
@@ -154,46 +159,97 @@
     return await r.json();
   }
 
-  function resize(){
+  function resize(dpr){
     const rect = c.getBoundingClientRect();
     c.width  = Math.round(rect.width * dpr);
     c.height = Math.round(rect.height * dpr);
   }
 
-  function toDailySeries(series6h){
-    // 1 Punkt pro Tag: Tagesmittel aus 6h-Buckets
-    const map = new Map(); // "dd.mm" -> {sum,n,dd,mm}
+  function to6hSeries(series6h){
+    // Ziel: 6h Punkte (statt Daily). X = fortlaufender Index in Tagen (dd-1) + hh/24
+    const out = [];
     for (const p of (series6h || [])) {
       const t = parseLabel(p.label);
       if(!t) continue;
       const y = +p.value;
       if(!isFinite(y)) continue;
-      const key = `${t.dd}.${t.mm}`;
-      const o = map.get(key) || {sum:0,n:0,dd:t.dd,mm:t.mm};
-      o.sum += y; o.n += 1;
-      map.set(key, o);
+      out.push({
+        x: (t.dd - 1) + (t.hh / 24),
+        y,
+        dd: t.dd,
+        mm: t.mm,
+        hh: t.hh,
+        label: p.label
+      });
     }
-    return [...map.values()]
-      .sort((a,b)=> (a.mm-b.mm) || (a.dd-b.dd))
-      .map(o => ({
-        x:(o.dd - 1) + 0.5,
-        y:o.sum / o.n,
-        dd:o.dd,
-        mm:o.mm,
-        label:`${String(o.dd).padStart(2,"0")}.${String(o.mm).padStart(2,"0")}`
-      }));
+    out.sort((a,b)=> a.x - b.x);
+    return out;
   }
 
-  function lastDailyPoint(series6h){
-    const daily = toDailySeries(series6h);
-    return daily.length ? daily[daily.length - 1] : null;
+  function lastPoint(series6h){
+    const s = to6hSeries(series6h);
+    return s.length ? s[s.length - 1] : null;
+  }
+
+  function roundRect(ctx, x, y, w, h, r){
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.arcTo(x+w, y, x+w, y+h, r);
+    ctx.arcTo(x+w, y+h, x, y+h, r);
+    ctx.arcTo(x, y+h, x, y, r);
+    ctx.arcTo(x, y, x+w, y, r);
+    ctx.closePath();
+  }
+
+  // Hover (nearest X + tolerance in px)
+  let hoverBound = false;
+  function bindHover(){
+    if(hoverBound) return;
+    hoverBound = true;
+
+    wrap.addEventListener("mousemove", (ev) => {
+      const dpr = getDpr();
+      const rect = wrap.getBoundingClientRect();
+      const mx = (ev.clientX - rect.left) * dpr;
+
+      const pts = window.__mw_points || [];
+      const xPx = window.__mw_xpx || [];
+      if(!pts.length || !xPx.length){
+        tip.style.display = "none";
+        return;
+      }
+
+      // nearest X (nicht nearest point)
+      let bestIdx = -1;
+      let bestDist = Infinity;
+      for(let i=0;i<xPx.length;i++){
+        const dist = Math.abs(xPx[i] - mx);
+        if(dist < bestDist){ bestDist = dist; bestIdx = i; }
+      }
+
+      const tol = 18 * dpr;
+      if(bestIdx >= 0 && bestDist <= tol){
+        const p = pts[bestIdx];
+        tip.style.display = "block";
+        tip.textContent = `${String(p.dd).padStart(2,"0")}.${String(p.mm).padStart(2,"0")} ${String(p.hh).padStart(2,"0")}:00 – ${fmtCtKwh(p.valueCt)}`;
+        tip.style.left = `${(p.px / dpr)}px`;
+        tip.style.top  = `${(p.py / dpr)}px`;
+      }else{
+        tip.style.display = "none";
+      }
+    });
+
+    wrap.addEventListener("mouseleave", () => {
+      tip.style.display = "none";
+    });
   }
 
   function draw(current, prev){
-    resize();
+    const dpr = getDpr();
+    resize(dpr);
+
     ctx.setTransform(1,0,0,1,0,0);
     ctx.clearRect(0,0,c.width,c.height);
-
     ctx.lineJoin = "round";
     ctx.lineCap  = "round";
 
@@ -202,7 +258,7 @@
     // Layout
     const padL = 18*dpr, padT = 14*dpr, padB = 30*dpr, padR = 18*dpr;
 
-    // Rechts: Wertbox-Bereich
+    // Rechts: nur Textbereich (ohne Box)
     const labelZone = Math.round(250 * dpr);
     const gapToLabel = Math.round(16 * dpr);
 
@@ -211,14 +267,18 @@
     const plotX0 = padL;
     const plotY0 = padT;
 
-    // Daily Serie (current)
-    let series = toDailySeries(current.series_6h);
+    const labelX0 = plotX0 + plotW + gapToLabel; // start label zone
 
-    // Start nicht bei "null": letztes Daily vom Vormonat als Anchor davor setzen
-    const prevLast = lastDailyPoint(prev.series_6h);
-    if(prevLast){
-      // Anchor x = -0.5 (links vor Tag 1), y = prevLast.y
-      series = [{x:-0.5, y:prevLast.y, dd:0, mm:prevLast.mm, label:"Vormonat"}, ...series];
+    // 6h Serie (current)
+    let series = to6hSeries(current.series_6h);
+
+    // Startanker aus Vormonat
+    const prevLast = lastPoint(prev.series_6h);
+    if(prevLast && series.length){
+      // nur wenn zeitlich davor
+      if(prevLast.mm !== series[0].mm || prevLast.dd <= series[0].dd){
+        series = [{...prevLast, x:-0.25, label:"Vormonat"} , ...series];
+      }
     }
 
     if(series.length < 2){
@@ -232,9 +292,9 @@
     const [yy, mm] = (current.month || "").split("-").map(Number);
     const daysInMonth = new Date(yy, mm, 0).getDate();
 
-    // x range: -1 .. daysInMonth
-    const xMin = -1;
-    const xMax = daysInMonth;
+    // x range: -0.5 .. (daysInMonth - 1) + 18/24
+    const xMin = -0.5;
+    const xMax = (daysInMonth - 1) + 18/24;
 
     const ys = series.map(p => p.y);
     let yMin = Math.min(...ys);
@@ -256,7 +316,12 @@
     }
     ctx.stroke();
 
-    // Area
+    // Area (nur im Plot clippen)
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(plotX0, plotY0, plotW, plotH);
+    ctx.clip();
+
     ctx.beginPath();
     ctx.moveTo(xToPx(series[0].x), yToPx(series[0].y));
     for(const p of series) ctx.lineTo(xToPx(p.x), yToPx(p.y));
@@ -274,11 +339,18 @@
     ctx.lineWidth = 2*dpr;
     ctx.stroke();
 
-    // Marker: heutiger Tag (today_index) -> x = day + 0.5
-    const dayIndex = Math.min(Math.max(0, +current.today_index || 0), daysInMonth-1);
-    const xNow = xToPx(dayIndex + 0.5);
+    ctx.restore();
 
-    // Marker-Linie im Plot
+    // Marker: today_index (Tag) -> x = (day-1) + 12:00 (wir nehmen 12:00 als Marker)
+    const dayIndex = Math.min(Math.max(0, +current.today_index || 0), daysInMonth-1);
+    const xNow = xToPx(dayIndex + 12/24);
+
+    // Marker-Linie NUR im Plot (clip)
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(plotX0, plotY0, plotW, plotH);
+    ctx.clip();
+
     ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--marker").trim();
     ctx.lineWidth = 2*dpr;
     ctx.beginPath();
@@ -286,40 +358,28 @@
     ctx.lineTo(xNow, plotY0 + plotH);
     ctx.stroke();
 
-    // Connector nur bis Label-Box, aber NICHT durch Text:
-    // wir zeichnen ihn bis zur Boxkante und Box hat Background.
-    const labelX0 = plotX0 + plotW + gapToLabel; // start label zone
-    const boxW = labelZone;
-    const boxH = Math.round(92 * dpr);
-    const boxPad = Math.round(12 * dpr);
+    ctx.restore();
 
-    // y: nehme den letzten Punkt <= today (oder letzten)
+    // yNow: nehme den letzten Punkt <= xNow (skip anchor label)
     let pNow = null;
     for(let i=series.length-1;i>=0;i--){
       const p = series[i];
-      if(p.dd === 0) continue; // skip anchor
-      if(p.dd <= (dayIndex+1)){ pNow = p; break; }
+      if(p.label === "Vormonat") continue;
+      if(xToPx(p.x) <= xNow + 0.0001){ pNow = p; break; }
     }
     if(!pNow) pNow = series[series.length-1];
     const yNow = yToPx(pNow.y);
 
+    // Connector: endet VOR Textzone (nicht durch Schrift)
+    const stopX = labelX0 - (10 * dpr);
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--marker").trim();
+    ctx.lineWidth = 2*dpr;
     ctx.beginPath();
     ctx.moveTo(xNow, yNow);
-    ctx.lineTo(labelX0, yNow);
+    ctx.lineTo(stopX, yNow);
     ctx.stroke();
 
-    // Label-Box
-    const boxY = Math.max(plotY0 + 8*dpr, Math.min(plotY0 + plotH - boxH - 8*dpr, yNow - boxH/2));
-    ctx.fillStyle = "#ffffff";
-    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--border").trim();
-    ctx.lineWidth = 1*dpr;
-
-    const r = 10*dpr;
-    roundRect(ctx, labelX0, boxY, boxW, boxH, r);
-    ctx.fill();
-    ctx.stroke();
-
-    // Werte (ct/kWh)
+    // Rechte Werte: Monatsnamen + Trennlinie (kein Kasten)
     const curName = monthName(current.month);
     const prevName = monthName(prev.month);
 
@@ -327,104 +387,76 @@
     const prevIsOfficial = !!prev.official_available && prev.official_eur_mwh != null;
     const prevValCt = eurMwhToCtKwh(prevIsOfficial ? prev.official_eur_mwh : prev.estimate_eur_mwh);
 
+    // Textblock positioniert um yNow (aber innerhalb Plot-Höhe)
+    const blockPadTop = 6*dpr;
+    const line1 = 22*dpr; // value
+    const line2 = 16*dpr; // month
+    const gap   = 8*dpr;
+    const sepH  = 1*dpr;
+
+    const blockH = (line1 + line2) + gap + sepH + gap + (line1 + line2);
+    const blockY = Math.max(plotY0 + 6*dpr, Math.min(plotY0 + plotH - blockH - 6*dpr, yNow - blockH/2));
+    const xText = labelX0;
+
+    // Current value
     ctx.textAlign = "left";
     ctx.textBaseline = "alphabetic";
 
-    // Aktuell
     ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--line").trim();
     ctx.font = `${18*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
-    ctx.fillText(fmtCtKwh(estCurCt), labelX0 + boxPad, boxY + 30*dpr);
+    ctx.fillText(fmtCtKwh(estCurCt), xText, blockY + blockPadTop + 18*dpr);
 
     ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim();
     ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
-    ctx.fillText(curName, labelX0 + boxPad, boxY + 50*dpr);
+    ctx.fillText(curName, xText, blockY + blockPadTop + 36*dpr);
 
-    // Vormonat
+    // Separator line between values
+    const sepY = blockY + blockPadTop + 36*dpr + gap;
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--border").trim();
+    ctx.lineWidth = 1*dpr;
+    ctx.beginPath();
+    ctx.moveTo(xText, sepY);
+    ctx.lineTo(xText + (labelZone - 20*dpr), sepY);
+    ctx.stroke();
+
+    // Prev value
+    const yPrev1 = sepY + gap + 18*dpr;
+    const yPrev2 = sepY + gap + 36*dpr;
+
     ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--valueBlue").trim();
     ctx.font = `${16*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
-    ctx.fillText(fmtCtKwh(prevValCt), labelX0 + boxPad, boxY + 74*dpr);
+    ctx.fillText(fmtCtKwh(prevValCt), xText, yPrev1);
 
     ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim();
     ctx.font = `${12*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
-    ctx.fillText(prevIsOfficial ? `${prevName} (offiziell)` : prevName, labelX0 + boxPad, boxY + 92*dpr);
+    ctx.fillText(prevIsOfficial ? `${prevName} (offiziell)` : prevName, xText, yPrev2);
 
-    // X-Achsenmarker (mehrere)
+    // X-Achsenmarker (1,8,15,22,last)
     ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--muted").trim();
     ctx.font = `${11*dpr}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
     ctx.textAlign = "center";
 
     const marks = [1, 8, 15, 22, daysInMonth].filter((v,i,a)=>a.indexOf(v)===i);
     for(const d of marks){
-      const x = xToPx((d-1)+0.5);
+      const x = xToPx((d-1) + 12/24);
       ctx.fillText(String(d).padStart(2,"0"), x, plotY0 + plotH + 18*dpr);
     }
 
-    // Hover-Punkte cache fürs Tooltip
-    const hoverPoints = series
-      .filter(p => p.dd !== 0)
+    // Hover caches (nearest X)
+    const pts = series
+      .filter(p => p.label !== "Vormonat")
       .map(p => ({
-        px:xToPx(p.x),
-        py:yToPx(p.y),
-        dd:p.dd,
-        mm:p.mm,
+        px: xToPx(p.x),
+        py: yToPx(p.y),
+        dd: p.dd,
+        mm: p.mm,
+        hh: p.hh,
         valueCt: eurMwhToCtKwh(p.y),
       }));
 
-    attachHover(hoverPoints);
-  }
-
-  function roundRect(ctx, x, y, w, h, r){
-    ctx.beginPath();
-    ctx.moveTo(x+r, y);
-    ctx.arcTo(x+w, y, x+w, y+h, r);
-    ctx.arcTo(x+w, y+h, x, y+h, r);
-    ctx.arcTo(x, y+h, x, y, r);
-    ctx.arcTo(x, y, x+w, y, r);
-    ctx.closePath();
-  }
-
-  let hoverHandlerBound = false;
-  function attachHover(points){
-    // einmalig binden, aber points aktualisieren
-    window.__mw_points = points;
-
-    if(hoverHandlerBound) return;
-    hoverHandlerBound = true;
-
-    wrap.addEventListener("mousemove", (ev) => {
-      const rect = wrap.getBoundingClientRect();
-      const mx = (ev.clientX - rect.left) * dpr;
-      const my = (ev.clientY - rect.top) * dpr;
-
-      const pts = window.__mw_points || [];
-      let best = null;
-      let bestD = 1e18;
-
-      for(const p of pts){
-        const dx = p.px - mx;
-        const dy = p.py - my;
-        const d2 = dx*dx + dy*dy;
-        if(d2 < bestD){
-          bestD = d2;
-          best = p;
-        }
-      }
-
-      // threshold: 12px
-      const thr = (12*dpr)*(12*dpr);
-      if(best && bestD <= thr){
-        tip.style.display = "block";
-        tip.textContent = `${String(best.dd).padStart(2,"0")}.${String(best.mm).padStart(2,"0")} – ${fmtCtKwh(best.valueCt)}`;
-        tip.style.left = `${(best.px / dpr)}px`;
-        tip.style.top  = `${(best.py / dpr)}px`;
-      }else{
-        tip.style.display = "none";
-      }
-    });
-
-    wrap.addEventListener("mouseleave", () => {
-      tip.style.display = "none";
-    });
+    window.__mw_points = pts;
+    window.__mw_xpx = pts.map(p => p.px);
+    bindHover();
   }
 
   async function init(){
@@ -438,7 +470,10 @@
       elUpd.textContent = `Update: ${current.updated_utc || "–"}`;
 
       draw(current, prev);
+
       window.addEventListener("resize", () => draw(current, prev));
+      // optional: wenn devicePixelRatio sich ohne resize ändert (Zoom), dann bei focus redraw
+      window.addEventListener("focus", () => draw(current, prev));
     } catch(e){
       elErr.style.display = "block";
       elErr.textContent = "Fehler beim Laden der JSON: " + (e?.message || e);
