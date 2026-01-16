@@ -7,18 +7,19 @@
 
   <style>
     :root{
-      --topbar-h: 64px;
+      --topbar-h: 68px;
       --page-pad-x: 28px;
       --page-pad-y: 28px;
 
-      --inner-max: 1600px;         /* breiter */
+      --inner-max: 1600px;
       --inner-pad-x: 26px;
-      --inner-pad-y: 52px;         /* oben/unten deutlich mehr */
+      --inner-pad-y: 52px;
 
-      --surface: rgba(255,255,255,.82);       /* content background (weiß/transparent) */
-      --panel: rgba(255,255,255,.92);         /* dropdown background */
+      --surface: rgba(255,255,255,.82);
+      --panel: rgba(255,255,255,.92);
       --border: rgba(15,23,42,.10);
-      --shadow: 0 16px 34px rgba(0,0,0,.16);
+      --shadow: 0 10px 24px rgba(0,0,0,.12);         /* weniger, cleaner */
+      --shadow-float: 0 12px 26px rgba(0,0,0,.12);    /* dropdown */
 
       --text: #0f172a;
       --muted: rgba(15,23,42,.62);
@@ -54,34 +55,34 @@
     #video-bg video.is-visible{ opacity:1; }
     #video-bg .bg-overlay{ position:absolute; inset:0; background: var(--bg-overlay); }
 
-    /* TOPBAR (full width) */
+    /* TOPBAR */
     #topbar{
       position:fixed;
       top:0; left:0; right:0;
       height: var(--topbar-h);
       z-index: 100;
 
-      background: rgba(255,255,255,.90);
+      background: rgba(255,255,255,.92);
       border-bottom: 1px solid var(--border);
-      box-shadow: 0 8px 18px rgba(0,0,0,.10);
+      box-shadow: var(--shadow);
 
       display:flex;
       align-items:center;
       justify-content:space-between;
       padding: 10px var(--page-pad-x);
-      gap: 12px;
+      gap: 14px;
     }
 
-    /* LEFT: only logo */
+    /* LEFT: big wide logo only */
     .brand{
       display:flex;
       align-items:center;
-      gap: 0;
       min-width: 0;
     }
     .brand img{
-      width: 42px;
-      height: 42px;
+      height: 48px;          /* bigger */
+      width: auto;           /* keep aspect */
+      max-width: 520px;      /* allow wide */
       object-fit: contain;
       display:block;
     }
@@ -92,54 +93,62 @@
       align-items:center;
       gap: 12px;
       position:relative;
+      flex: 0 0 auto;
     }
 
-    /* profile/weather (slimmer) */
+    /* profile/weather (wider) */
     .profilebox{
       display:flex;
       align-items:center;
-      gap: 10px;
+      gap: 12px;
 
-      padding: 6px 10px;
+      min-width: 260px;      /* wider */
+      padding: 8px 14px;     /* more breathing room */
       border-radius: 999px;
+
       border: 1px solid rgba(15,23,42,.10);
-      background: rgba(255,255,255,.65);
+      background: rgba(255,255,255,.70);
       backdrop-filter: blur(6px);
       -webkit-backdrop-filter: blur(6px);
     }
     .profilebox img{
-      width: 34px;
-      height: 34px;
+      width: 36px;
+      height: 36px;
       border-radius: 999px;
       object-fit: cover;
       display:block;
       border: 1px solid rgba(15,23,42,.10);
       background:#fff;
+      flex: 0 0 auto;
     }
     .metas{
       display:flex;
       flex-direction:column;
       line-height: 1.05;
       gap: 4px;
-      padding-right: 2px;
+      min-width: 0;
+      flex: 1 1 auto;
     }
     .metas .user{
-      font-size: 12px;
+      font-size: 12.5px;
       font-weight: 600;
-      color: var(--text);
-      opacity: .92;
+      color: rgba(15,23,42,.92);
       white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
     }
     .metas .wx{
-      font-size: 12px;
+      font-size: 12.5px;
       color: var(--muted);
       white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
     }
 
     /* ICONS: bigger, no visible container */
     .icon-btn{
-      width: 44px;
-      height: 44px;
+      width: 46px;
+      height: 46px;
       border-radius: 999px;
 
       border: 0;
@@ -151,19 +160,19 @@
       transition: transform 140ms ease, background 140ms ease;
       position:relative;
       padding:0;
-      color: var(--text);
+      color: rgba(15,23,42,.90);
     }
     .icon-btn:hover{
       transform: translateY(-1px);
-      background: rgba(15,23,42,.04); /* super dezent */
+      background: rgba(15,23,42,.04);
     }
     .icon-btn:focus{ outline: 2px solid rgba(15,23,42,.18); outline-offset: 2px; }
     .icon-btn svg{ display:block; }
 
     .badge{
       position:absolute;
-      top: 6px;
-      right: 6px;
+      top: 7px;
+      right: 7px;
       min-width: 18px;
       height: 18px;
       padding: 0 5px;
@@ -177,18 +186,18 @@
       box-shadow: 0 8px 16px rgba(225,29,72,.20);
     }
 
-    /* DROPDOWNS: light & clean (not fat/boxed) */
+    /* DROPDOWNS: slimmer + lighter */
     .dropdown{
       position: fixed;
       top: calc(var(--topbar-h) + 10px);
       right: var(--page-pad-x);
-      width: 320px;
+      width: 290px;                          /* slimmer */
 
       background: var(--panel);
       color: var(--text);
       border: 1px solid rgba(15,23,42,.10);
-      border-radius: 16px;
-      box-shadow: var(--shadow);
+      border-radius: 14px;
+      box-shadow: var(--shadow-float);
 
       opacity: 0;
       pointer-events: none;
@@ -204,59 +213,60 @@
       pointer-events: auto;
       transform: translateY(0);
     }
+
     .drop-head{
-      padding: 10px 14px;
-      font-size: 11px;
-      letter-spacing: .08em;
+      padding: 10px 12px;
+      font-size: 10.5px;
+      letter-spacing: .10em;
       text-transform: uppercase;
-      color: rgba(15,23,42,.52);
-      border-bottom: 1px solid rgba(15,23,42,.08);
-      background: rgba(255,255,255,.55);
+      color: rgba(15,23,42,.50);
+      border-bottom: 1px solid rgba(15,23,42,.06);
+      background: transparent;              /* no header block */
     }
 
     .drop-list{
       list-style:none;
       margin:0;
-      padding: 8px;
+      padding: 6px 6px 8px 6px;
       display:flex;
       flex-direction:column;
-      gap: 2px; /* weniger Abstand */
+      gap: 0px;                             /* tighter */
     }
 
     .drop-item{
       width:100%;
       border: 0;
       border-radius: 10px;
-      padding: 9px 10px;   /* weniger “klobig” */
+      padding: 8px 10px;                    /* smaller */
       background: transparent;
       cursor:pointer;
       text-align:left;
-      color: var(--text);
+      color: rgba(15,23,42,.88);
       transition: background 120ms ease;
       display:flex;
       flex-direction:column;
       gap: 4px;
     }
-    .drop-item:hover{ background: rgba(15,23,42,.04); }
+    .drop-item:hover{ background: rgba(15,23,42,.035); }
 
     .drop-title{
-      font-weight: 500;   /* nicht fett */
-      font-size: 13px;
+      font-weight: 500;                     /* not bold */
+      font-size: 12.5px;
     }
     .drop-sub{
       font-size: 12px;
-      color: var(--muted);
+      color: rgba(15,23,42,.56);
     }
 
     .sep{
       height:1px;
-      background: rgba(15,23,42,.10);
-      margin: 6px 8px;
+      background: rgba(15,23,42,.08);
+      margin: 6px 10px;
       border:0;
     }
 
-    .drop-item.logout{ background: rgba(225,29,72,.08); }
-    .drop-item.logout:hover{ background: rgba(225,29,72,.12); }
+    .drop-item.logout{ background: rgba(225,29,72,.06); }       /* subtler */
+    .drop-item.logout:hover{ background: rgba(225,29,72,.09); }
 
     /* SECTIONS STACK */
     #sections{
@@ -278,14 +288,14 @@
       justify-content:center;
     }
 
-    /* CONTENT CONTAINER */
+    /* CONTENT */
     .inner-container{
       width: min(var(--inner-max), 100%);
       height: calc(100vh - (var(--topbar-h) + (var(--page-pad-y) * 2)));
       border-radius: 22px;
       border: 1px solid rgba(255,255,255,.55);
       background: var(--surface);
-      box-shadow: var(--shadow);
+      box-shadow: var(--shadow-float);
       overflow:hidden;
       position:relative;
       padding: var(--inner-pad-y) var(--inner-pad-x);
@@ -299,10 +309,14 @@
       padding-right: 10px;
     }
 
-    @media (max-width: 780px){
-      :root{ --page-pad-x: 14px; --page-pad-y: 16px; --inner-pad-y: 38px; }
+    @media (max-width: 980px){
+      :root{ --page-pad-x: 16px; --page-pad-y: 16px; --inner-pad-y: 40px; }
       .profilebox{ display:none; }
-      .dropdown{ width: min(320px, calc(100vw - 28px)); right: 14px; }
+      .brand img{ max-width: 320px; height: 44px; }
+      .dropdown{ width: min(290px, calc(100vw - 32px)); right: 16px; }
+    }
+    @media (max-width: 520px){
+      .brand img{ max-width: 240px; height: 40px; }
     }
   </style>
 </head>
@@ -316,7 +330,6 @@
 
   <header id="topbar">
     <div class="brand">
-      <!-- FIX: richtiges Logo -->
       <img src="assets/logo/wes_windkompass.png" alt="WES WindKompass" />
     </div>
 
@@ -324,7 +337,6 @@
       <div class="profilebox">
         <img src="assets/profile/user.png" alt="Profil" />
         <div class="metas">
-          <!-- FIX: User_Name statt Name -->
           <div class="user">User_Name</div>
           <div class="wx">🌬️ 7 m/s · 3°C</div>
         </div>
@@ -332,7 +344,7 @@
 
       <button class="icon-btn" type="button" data-action="toggle-notify" aria-label="Benachrichtigungen">
         <span class="badge" aria-label="2 Benachrichtigungen">2</span>
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2Z" fill="currentColor" opacity=".85"/>
           <path d="M18 16v-5a6 6 0 1 0-12 0v5l-2 2h16l-2-2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" opacity=".85"/>
         </svg>
@@ -340,7 +352,7 @@
       </button>
 
       <button class="icon-btn" type="button" data-action="toggle-menu" aria-label="Menü">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <line x1="4" y1="7" x2="20" y2="7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           <line x1="4" y1="17" x2="20" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
