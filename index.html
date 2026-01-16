@@ -10,26 +10,29 @@
       --pad: 22px;
       --inner-max: 1100px;
 
-      /* Unified glass look (Menu-Button + Content) */
+      /* glass content container */
       --glass-bg: rgba(255,255,255,.10);
       --glass-border: rgba(255,255,255,.18);
-      --glass-shadow: 0 10px 26px rgba(0,0,0,.25);
       --glass-blur: blur(12px);
-
-      --inner-text: #0f172a;
+      --shadow: 0 14px 40px rgba(0,0,0,.28);
 
       --bg-overlay: rgba(0,0,0,.42);
-
-      --nav-size: 60px;
-      --nav-open-w: 300px;
-      --nav-open-h: 290px;
-      --nav-gap: 12px;
-      --nav-right: 26px;
 
       --snap-ms: 520ms;
       --fade-ms: 1200ms;
 
-      --shadow: 0 14px 40px rgba(0,0,0,.28);
+      /* topbar */
+      --topbar-h: 64px;
+      --topbar-gap: 12px;
+
+      /* white panels */
+      --panel-bg: #fff;
+      --panel-text: #0f172a;
+      --panel-border: rgba(15,23,42,.10);
+      --panel-shadow: 0 14px 30px rgba(0,0,0,.22);
+
+      --btn-bg: rgba(15,23,42,.06);
+      --btn-bg-hover: rgba(15,23,42,.10);
     }
 
     *{ box-sizing:border-box; }
@@ -46,9 +49,7 @@
     }
 
     /* VIDEO BG */
-    #video-bg{
-      position:fixed; inset:0; z-index:-10; overflow:hidden;
-    }
+    #video-bg{ position:fixed; inset:0; z-index:-10; overflow:hidden; }
     #video-bg video{
       position:absolute; inset:0;
       width:100%; height:100%;
@@ -57,10 +58,7 @@
       transition: opacity var(--fade-ms) ease;
     }
     #video-bg video.is-visible{ opacity:1; }
-    #video-bg .bg-overlay{
-      position:absolute; inset:0;
-      background: var(--bg-overlay);
-    }
+    #video-bg .bg-overlay{ position:absolute; inset:0; background: var(--bg-overlay); }
 
     /* SECTIONS STACK */
     #sections{
@@ -77,283 +75,542 @@
       justify-content:center;
     }
 
-    /* CONTENT CONTAINER (now same glass optics as menu button) */
+    /* CONTENT CONTAINER */
     .inner-container{
       width: min(var(--inner-max), 100%);
-      max-height: calc(100vh - (var(--pad) * 2));
-      color: #fff;
-
+      height: calc(100vh - (var(--pad) * 2));
       border-radius: 18px;
       border: 1px solid var(--glass-border);
       background: var(--glass-bg);
       backdrop-filter: var(--glass-blur);
       -webkit-backdrop-filter: var(--glass-blur);
       box-shadow: var(--shadow);
+      overflow:hidden;
+      position:relative;
 
-      padding: 18px;
+      /* space for topbar inside */
+      padding: calc(var(--topbar-h) + var(--topbar-gap)) 18px 18px 18px;
+    }
+
+    /* page content scroll */
+    .page-content{
+      height: calc(100% - 0px);
       overflow:hidden;
     }
-
-    /* optional: readable content base color inside sections */
-    .inner-container .content-surface{
-      border-radius: 14px;
-      background: rgba(255,255,255,0.85);
-      color: var(--inner-text);
-      padding: 16px;
-      border: 1px solid rgba(15,23,42,.08);
-    }
-
-    .section[data-inner-scroll="true"] .inner-container{
+    .section[data-inner-scroll="true"] .page-content{
+      height: calc(100% - 0px);
       overflow:auto;
       -webkit-overflow-scrolling: touch;
       padding-right: 10px;
     }
 
-    /* NAV (bigger hit-area) */
-    #icon-nav{
-      position:fixed;
-      right: var(--nav-right);
-      top: 50%;
-      transform: translateY(-50%);
-      z-index:50;
+    /* TOPBAR (white) */
+    .topbar{
+      position:absolute;
+      left: 10px;
+      right: 10px;
+      top: 10px;
+      height: var(--topbar-h);
 
-      width: calc(var(--nav-size) + 34px);  /* hit area */
-      height: calc(var(--nav-size) + 34px); /* hit area */
+      background: var(--panel-bg);
+      color: var(--panel-text);
+      border: 1px solid var(--panel-border);
+      border-radius: 16px;
+      box-shadow: var(--panel-shadow);
 
       display:flex;
       align-items:center;
-      justify-content:flex-end;
-
-      padding: 17px; /* invisible padding to make it easy to reach */
+      justify-content:space-between;
+      gap: 12px;
+      padding: 10px 12px;
     }
 
-    #nav-toggle{
-      width: var(--nav-size);
-      height: var(--nav-size);
-      border-radius: 999px;
-      border: 1px solid var(--glass-border);
-      background: var(--glass-bg);
-      backdrop-filter: var(--glass-blur);
-      -webkit-backdrop-filter: var(--glass-blur);
-      box-shadow: var(--glass-shadow);
+    .brand{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      min-width: 0;
+    }
+    .brand img{
+      width: 38px;
+      height: 38px;
+      object-fit: contain;
+      border-radius: 10px;
+      background: #fff;
+      border: 1px solid rgba(15,23,42,.08);
+      flex: 0 0 auto;
+    }
+    .brand-text{
+      display:flex;
+      flex-direction:column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .brand-name{
+      font-weight: 650;
+      font-size: 14px;
+      line-height: 1.1;
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+    }
+    .brand-sub{
+      font-size: 12px;
+      opacity: .70;
+      white-space: nowrap;
+      overflow:hidden;
+      text-overflow: ellipsis;
+    }
+
+    .actions{
+      display:flex;
+      align-items:center;
+      gap: 8px;
+      flex: 0 0 auto;
+      position:relative;
+    }
+
+    .icon-btn{
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      border: 1px solid rgba(15,23,42,.10);
+      background: var(--btn-bg);
       cursor:pointer;
       display:grid;
       place-items:center;
-      transition: transform 180ms ease, background 180ms ease;
+      transition: background 140ms ease, transform 140ms ease;
       position:relative;
-      z-index:2;
       padding:0;
     }
-    #nav-toggle:hover{ transform: scale(1.05); background: rgba(255,255,255,.14); }
-    #nav-toggle:focus{ outline:2px solid rgba(255,255,255,.35); outline-offset:3px; }
-    #nav-toggle svg{ display:block; }
+    .icon-btn:hover{ background: var(--btn-bg-hover); transform: translateY(-1px); }
+    .icon-btn:focus{ outline: 2px solid rgba(15,23,42,.20); outline-offset: 2px; }
+    .icon-btn svg{ display:block; }
 
-    #nav-panel{
+    /* badge */
+    .badge{
       position:absolute;
-      right: calc(var(--nav-size) + var(--nav-gap) + 17px); /* + hit padding */
-      top: 50%;
-      transform: translateY(-50%);
-
-      width: var(--nav-open-w);
-      height: var(--nav-open-h);
-
-      border-radius: 18px;
-      border: 1px solid var(--glass-border);
-      background: rgba(255,255,255,.12);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      box-shadow: 0 12px 30px rgba(0,0,0,.25);
-
-      opacity:0;
-      pointer-events:none;
-
-      transition: opacity 180ms ease, transform 220ms ease;
-      transform-origin: right center;
-    }
-
-    #nav-panel .panel-inner{
-      height:100%;
-      padding: 14px;
-      display:flex;
-      flex-direction:column;
-      gap: 10px;
-
-      opacity:0;
-      transform: translateX(6px);
-      transition: opacity 180ms ease 60ms, transform 220ms ease 60ms;
-    }
-
-    #icon-nav.is-open #nav-panel{
-      opacity:1;
-      pointer-events:auto;
-      transform: translateY(-50%) translateX(0);
-    }
-    #icon-nav.is-open #nav-panel .panel-inner{
-      opacity:1;
-      transform: translateX(0);
-    }
-
-    .nav-title{
+      top: 6px;
+      right: 6px;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      border-radius: 999px;
+      background: #e11d48;
       color:#fff;
-      opacity:.82;
+      font-size: 11px;
+      line-height: 18px;
+      font-weight: 700;
+      text-align:center;
+      box-shadow: 0 8px 18px rgba(225,29,72,.28);
+    }
+
+    /* dropdown panels (white) */
+    .dropdown{
+      position:absolute;
+      top: calc(42px + 10px);
+      right: 0;
+      width: 320px;
+
+      background: var(--panel-bg);
+      color: var(--panel-text);
+      border: 1px solid var(--panel-border);
+      border-radius: 16px;
+      box-shadow: var(--panel-shadow);
+
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-6px);
+      transition: opacity 140ms ease, transform 160ms ease;
+      overflow:hidden;
+      z-index: 5;
+    }
+    .dropdown.is-open{
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+
+    .drop-head{
+      padding: 12px 12px 10px 12px;
       font-size: 12px;
       letter-spacing: .06em;
       text-transform: uppercase;
-      margin: 2px 0 2px 2px;
+      opacity: .75;
+      border-bottom: 1px solid rgba(15,23,42,.08);
     }
 
-    .nav-list{
+    .drop-list{
+      list-style:none;
+      margin:0;
+      padding: 6px;
       display:flex;
       flex-direction:column;
       gap: 6px;
-      margin:0;
-      padding:0;
-      list-style:none;
     }
 
-    .nav-item{
-      border-radius: 14px;
-      padding: 10px 12px;
-      color:#fff;
-      opacity:.90;
-      border: 1px solid rgba(255,255,255,.0);
-      background: rgba(255,255,255,.00);
+    .drop-item{
+      width:100%;
+      border: 0;
+      border-radius: 12px;
+      padding: 10px 10px;
+      background: rgba(15,23,42,.04);
       cursor:pointer;
       text-align:left;
-
-      display:flex;
-      align-items:center;
-      gap:10px;
-
-      transition: background 160ms ease, transform 160ms ease, opacity 160ms ease;
-    }
-
-    .nav-item .dot{
-      width:8px; height:8px;
-      border-radius: 999px;
-      background: rgba(255,255,255,.35);
-      flex: 0 0 auto;
-      transition: background 160ms ease, transform 160ms ease;
-    }
-
-    .nav-item:hover{
-      background: rgba(255,255,255,.10);
-      transform: translateX(-2px);
-      opacity: 1;
-    }
-
-    .nav-item.active{
-      background: rgba(255,255,255,.14);
-      opacity: 1;
-    }
-    .nav-item.active .dot{
-      background: rgba(255,255,255,.85);
-      transform: scale(1.05);
-    }
-
-    .nav-sep{
-      height:1px;
-      width:100%;
-      background: rgba(255,255,255,.18);
-      border:0;
-      margin: 6px 0;
-    }
-
-    .nav-item.logout{
-      background: rgba(255,255,255,.16);
-      border: 1px solid rgba(255,255,255,.12);
-      opacity: 1;
-    }
-    .nav-item.logout .dot{ background: rgba(255,255,255,.85); }
-
-    .nav-bottom{
-      margin-top:auto;
+      color: var(--panel-text);
+      transition: background 140ms ease, transform 140ms ease;
       display:flex;
       flex-direction:column;
-      gap: 6px;
+      gap: 4px;
+    }
+    .drop-item:hover{ background: rgba(15,23,42,.07); transform: translateY(-1px); }
+
+    .drop-title{ font-weight: 650; font-size: 13px; }
+    .drop-sub{ font-size: 12px; opacity: .72; }
+
+    .sep{
+      height:1px;
+      background: rgba(15,23,42,.10);
+      margin: 4px 6px;
+      border:0;
     }
 
-    @media (hover:none){
-      #nav-toggle:hover{ transform:none; }
+    .drop-item.logout{
+      background: rgba(225,29,72,.08);
+    }
+    .drop-item.logout:hover{
+      background: rgba(225,29,72,.12);
+    }
+
+    @media (max-width: 520px){
+      .dropdown{ width: min(320px, calc(100vw - 44px)); }
+      .brand-sub{ display:none; }
     }
   </style>
 </head>
 
 <body>
-  <!-- Background Video (2 layers for crossfade) -->
   <div id="video-bg" aria-hidden="true">
     <video id="bgA" autoplay muted playsinline preload="auto"></video>
     <video id="bgB" autoplay muted playsinline preload="auto"></video>
     <div class="bg-overlay"></div>
   </div>
 
-  <!-- Icon Navigation -->
-  <nav id="icon-nav" aria-label="Navigation">
-    <button id="nav-toggle" aria-expanded="false" aria-controls="nav-panel">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
-           xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <line x1="4" y1="7" x2="20" y2="7"
-              stroke="rgba(255,255,255,0.85)" stroke-width="2" stroke-linecap="round"/>
-        <line x1="4" y1="12" x2="20" y2="12"
-              stroke="rgba(255,255,255,0.85)" stroke-width="2" stroke-linecap="round"/>
-        <line x1="4" y1="17" x2="20" y2="17"
-              stroke="rgba(255,255,255,0.85)" stroke-width="2" stroke-linecap="round"/>
-      </svg>
-      <span class="sr-only">Navigation öffnen</span>
-    </button>
-
-    <div id="nav-panel" role="menu" aria-label="Menü">
-      <div class="panel-inner">
-        <div class="nav-title">Navigation</div>
-
-        <ul class="nav-list" aria-label="Hauptmenü">
-          <li><button class="nav-item" role="menuitem" data-target="overview"><span class="dot"></span>Übersicht</button></li>
-          <li><button class="nav-item" role="menuitem" data-target="turbines"><span class="dot"></span>Windenergieanlage</button></li>
-          <li><button class="nav-item" role="menuitem" data-target="redispatch"><span class="dot"></span>Redispatch</button></li>
-          <li><button class="nav-item" role="menuitem" data-target="documents"><span class="dot"></span>Dokumente</button></li>
-          <li><button class="nav-item" role="menuitem" data-target="account"><span class="dot"></span>Konto</button></li>
-        </ul>
-
-        <hr class="nav-sep" />
-
-        <button class="nav-item logout" role="menuitem" id="btn-logout">
-          <span class="dot"></span>Abmelden
-        </button>
-
-        <hr class="nav-sep" />
-
-        <div class="nav-bottom" aria-label="Rechtliches">
-          <button class="nav-item" role="menuitem" id="btn-impressum">
-            <span class="dot"></span>Impressum &amp; Rechtliches
-          </button>
-        </div>
-      </div>
-    </div>
-  </nav>
-
-  <!-- Sections -->
   <main id="sections">
-    <section id="overview" class="section" data-inner-scroll="false">
-      <div class="inner-container" data-load="sections/overview/content.html"></div>
-    </section>
-
-    <section id="turbines" class="section" data-inner-scroll="true">
-      <div class="inner-container" data-load="sections/turbines/content.html"></div>
-    </section>
-
-    <section id="redispatch" class="section" data-inner-scroll="false">
-      <div class="inner-container" data-load="sections/redispatch/content.html"></div>
-    </section>
-
-    <section id="documents" class="section" data-inner-scroll="true">
-      <div class="inner-container" data-load="sections/documents/content.html"></div>
-    </section>
-
-    <section id="account" class="section" data-inner-scroll="true">
+    <!-- Übersicht -->
+    <section id="overview" class="section" data-inner-scroll="false" data-title="Übersicht">
       <div class="inner-container">
-        <div class="content-surface">
-          <h2 style="margin:0 0 10px 0;">Konto</h2>
-          <p style="margin:0;">Hier kommen später Kontodaten / Einstellungen rein.</p>
+        <header class="topbar">
+          <div class="brand">
+            <!-- PNG Logo: Pfad einfach anpassen -->
+            <img src="assets/logo/windkompass_logo.png" alt="Logo" />
+            <div class="brand-text">
+              <div class="brand-name">WES WindKompass</div>
+              <div class="brand-sub">Monitoring &amp; Auswertung</div>
+            </div>
+          </div>
+
+          <div class="actions">
+            <!-- Glocke -->
+            <button class="icon-btn" type="button" data-action="toggle-notify" aria-label="Benachrichtigungen">
+              <span class="badge" aria-label="2 Benachrichtigungen">2</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2Z" fill="currentColor" opacity=".85"/>
+                <path d="M18 16v-5a6 6 0 1 0-12 0v5l-2 2h16l-2-2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" opacity=".85"/>
+              </svg>
+              <span class="sr-only">Benachrichtigungen</span>
+            </button>
+
+            <!-- Menu -->
+            <button class="icon-btn" type="button" data-action="toggle-menu" aria-label="Menü">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <line x1="4" y1="7" x2="20" y2="7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <line x1="4" y1="17" x2="20" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="sr-only">Menü</span>
+            </button>
+
+            <!-- Notifications dropdown -->
+            <div class="dropdown" data-panel="notify" role="menu" aria-label="Benachrichtigungen">
+              <div class="drop-head">Benachrichtigungen</div>
+              <ul class="drop-list">
+                <li>
+                  <button class="drop-item" type="button">
+                    <div class="drop-title">Monatsberichte sind verfügbar</div>
+                    <div class="drop-sub">Neue Auswertungen können jetzt geöffnet werden.</div>
+                  </button>
+                </li>
+                <li>
+                  <button class="drop-item" type="button">
+                    <div class="drop-title">Parkbetreuer</div>
+                    <div class="drop-sub">„Schönen guten Tag …“</div>
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Menu dropdown -->
+            <div class="dropdown" data-panel="menu" role="menu" aria-label="Navigation">
+              <div class="drop-head">Navigation</div>
+              <ul class="drop-list">
+                <li><button class="drop-item" type="button" data-target="overview"><div class="drop-title">Übersicht</div></button></li>
+                <li><button class="drop-item" type="button" data-target="turbines"><div class="drop-title">Windenergieanlage</div></button></li>
+                <li><button class="drop-item" type="button" data-target="redispatch"><div class="drop-title">Redispatch</div></button></li>
+                <li><button class="drop-item" type="button" data-target="documents"><div class="drop-title">Dokumente</div></button></li>
+                <li><button class="drop-item" type="button" data-target="account"><div class="drop-title">Konto</div></button></li>
+
+                <li><hr class="sep"></li>
+
+                <li><button class="drop-item logout" type="button" data-action="logout"><div class="drop-title">Abmelden</div></button></li>
+
+                <li><hr class="sep"></li>
+
+                <li><button class="drop-item" type="button" data-action="impressum"><div class="drop-title">Impressum &amp; Rechtliches</div></button></li>
+              </ul>
+            </div>
+          </div>
+        </header>
+
+        <div class="page-content" data-load="sections/overview/content.html"></div>
+      </div>
+    </section>
+
+    <!-- Windenergieanlage -->
+    <section id="turbines" class="section" data-inner-scroll="true" data-title="Windenergieanlage">
+      <div class="inner-container">
+        <!-- gleiche Topbar (du kannst später serverseitig/templated sparen) -->
+        <header class="topbar">
+          <div class="brand">
+            <img src="assets/logo/windkompass_logo.png" alt="Logo" />
+            <div class="brand-text">
+              <div class="brand-name">WES WindKompass</div>
+              <div class="brand-sub">Monitoring &amp; Auswertung</div>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="icon-btn" type="button" data-action="toggle-notify" aria-label="Benachrichtigungen">
+              <span class="badge" aria-label="2 Benachrichtigungen">2</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2Z" fill="currentColor" opacity=".85"/>
+                <path d="M18 16v-5a6 6 0 1 0-12 0v5l-2 2h16l-2-2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" opacity=".85"/>
+              </svg>
+              <span class="sr-only">Benachrichtigungen</span>
+            </button>
+
+            <button class="icon-btn" type="button" data-action="toggle-menu" aria-label="Menü">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <line x1="4" y1="7" x2="20" y2="7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <line x1="4" y1="17" x2="20" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="sr-only">Menü</span>
+            </button>
+
+            <div class="dropdown" data-panel="notify" role="menu" aria-label="Benachrichtigungen">
+              <div class="drop-head">Benachrichtigungen</div>
+              <ul class="drop-list">
+                <li><button class="drop-item" type="button"><div class="drop-title">Monatsberichte sind verfügbar</div><div class="drop-sub">Neue Auswertungen können jetzt geöffnet werden.</div></button></li>
+                <li><button class="drop-item" type="button"><div class="drop-title">Parkbetreuer</div><div class="drop-sub">„Schönen guten Tag …“</div></button></li>
+              </ul>
+            </div>
+
+            <div class="dropdown" data-panel="menu" role="menu" aria-label="Navigation">
+              <div class="drop-head">Navigation</div>
+              <ul class="drop-list">
+                <li><button class="drop-item" type="button" data-target="overview"><div class="drop-title">Übersicht</div></button></li>
+                <li><button class="drop-item" type="button" data-target="turbines"><div class="drop-title">Windenergieanlage</div></button></li>
+                <li><button class="drop-item" type="button" data-target="redispatch"><div class="drop-title">Redispatch</div></button></li>
+                <li><button class="drop-item" type="button" data-target="documents"><div class="drop-title">Dokumente</div></button></li>
+                <li><button class="drop-item" type="button" data-target="account"><div class="drop-title">Konto</div></button></li>
+                <li><hr class="sep"></li>
+                <li><button class="drop-item logout" type="button" data-action="logout"><div class="drop-title">Abmelden</div></button></li>
+                <li><hr class="sep"></li>
+                <li><button class="drop-item" type="button" data-action="impressum"><div class="drop-title">Impressum &amp; Rechtliches</div></button></li>
+              </ul>
+            </div>
+          </div>
+        </header>
+
+        <div class="page-content" data-load="sections/turbines/content.html"></div>
+      </div>
+    </section>
+
+    <!-- Redispatch -->
+    <section id="redispatch" class="section" data-inner-scroll="false" data-title="Redispatch">
+      <div class="inner-container">
+        <header class="topbar">
+          <div class="brand">
+            <img src="assets/logo/windkompass_logo.png" alt="Logo" />
+            <div class="brand-text">
+              <div class="brand-name">WES WindKompass</div>
+              <div class="brand-sub">Monitoring &amp; Auswertung</div>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="icon-btn" type="button" data-action="toggle-notify" aria-label="Benachrichtigungen">
+              <span class="badge" aria-label="2 Benachrichtigungen">2</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2Z" fill="currentColor" opacity=".85"/>
+                <path d="M18 16v-5a6 6 0 1 0-12 0v5l-2 2h16l-2-2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" opacity=".85"/>
+              </svg>
+              <span class="sr-only">Benachrichtigungen</span>
+            </button>
+
+            <button class="icon-btn" type="button" data-action="toggle-menu" aria-label="Menü">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <line x1="4" y1="7" x2="20" y2="7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <line x1="4" y1="17" x2="20" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="sr-only">Menü</span>
+            </button>
+
+            <div class="dropdown" data-panel="notify" role="menu" aria-label="Benachrichtigungen">
+              <div class="drop-head">Benachrichtigungen</div>
+              <ul class="drop-list">
+                <li><button class="drop-item" type="button"><div class="drop-title">Monatsberichte sind verfügbar</div><div class="drop-sub">Neue Auswertungen können jetzt geöffnet werden.</div></button></li>
+                <li><button class="drop-item" type="button"><div class="drop-title">Parkbetreuer</div><div class="drop-sub">„Schönen guten Tag …“</div></button></li>
+              </ul>
+            </div>
+
+            <div class="dropdown" data-panel="menu" role="menu" aria-label="Navigation">
+              <div class="drop-head">Navigation</div>
+              <ul class="drop-list">
+                <li><button class="drop-item" type="button" data-target="overview"><div class="drop-title">Übersicht</div></button></li>
+                <li><button class="drop-item" type="button" data-target="turbines"><div class="drop-title">Windenergieanlage</div></button></li>
+                <li><button class="drop-item" type="button" data-target="redispatch"><div class="drop-title">Redispatch</div></button></li>
+                <li><button class="drop-item" type="button" data-target="documents"><div class="drop-title">Dokumente</div></button></li>
+                <li><button class="drop-item" type="button" data-target="account"><div class="drop-title">Konto</div></button></li>
+                <li><hr class="sep"></li>
+                <li><button class="drop-item logout" type="button" data-action="logout"><div class="drop-title">Abmelden</div></button></li>
+                <li><hr class="sep"></li>
+                <li><button class="drop-item" type="button" data-action="impressum"><div class="drop-title">Impressum &amp; Rechtliches</div></button></li>
+              </ul>
+            </div>
+          </div>
+        </header>
+
+        <div class="page-content" data-load="sections/redispatch/content.html"></div>
+      </div>
+    </section>
+
+    <!-- Dokumente -->
+    <section id="documents" class="section" data-inner-scroll="true" data-title="Dokumente">
+      <div class="inner-container">
+        <header class="topbar">
+          <div class="brand">
+            <img src="assets/logo/windkompass_logo.png" alt="Logo" />
+            <div class="brand-text">
+              <div class="brand-name">WES WindKompass</div>
+              <div class="brand-sub">Monitoring &amp; Auswertung</div>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="icon-btn" type="button" data-action="toggle-notify" aria-label="Benachrichtigungen">
+              <span class="badge" aria-label="2 Benachrichtigungen">2</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2Z" fill="currentColor" opacity=".85"/>
+                <path d="M18 16v-5a6 6 0 1 0-12 0v5l-2 2h16l-2-2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" opacity=".85"/>
+              </svg>
+              <span class="sr-only">Benachrichtigungen</span>
+            </button>
+
+            <button class="icon-btn" type="button" data-action="toggle-menu" aria-label="Menü">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <line x1="4" y1="7" x2="20" y2="7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <line x1="4" y1="17" x2="20" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="sr-only">Menü</span>
+            </button>
+
+            <div class="dropdown" data-panel="notify" role="menu" aria-label="Benachrichtigungen">
+              <div class="drop-head">Benachrichtigungen</div>
+              <ul class="drop-list">
+                <li><button class="drop-item" type="button"><div class="drop-title">Monatsberichte sind verfügbar</div><div class="drop-sub">Neue Auswertungen können jetzt geöffnet werden.</div></button></li>
+                <li><button class="drop-item" type="button"><div class="drop-title">Parkbetreuer</div><div class="drop-sub">„Schönen guten Tag …“</div></button></li>
+              </ul>
+            </div>
+
+            <div class="dropdown" data-panel="menu" role="menu" aria-label="Navigation">
+              <div class="drop-head">Navigation</div>
+              <ul class="drop-list">
+                <li><button class="drop-item" type="button" data-target="overview"><div class="drop-title">Übersicht</div></button></li>
+                <li><button class="drop-item" type="button" data-target="turbines"><div class="drop-title">Windenergieanlage</div></button></li>
+                <li><button class="drop-item" type="button" data-target="redispatch"><div class="drop-title">Redispatch</div></button></li>
+                <li><button class="drop-item" type="button" data-target="documents"><div class="drop-title">Dokumente</div></button></li>
+                <li><button class="drop-item" type="button" data-target="account"><div class="drop-title">Konto</div></button></li>
+                <li><hr class="sep"></li>
+                <li><button class="drop-item logout" type="button" data-action="logout"><div class="drop-title">Abmelden</div></button></li>
+                <li><hr class="sep"></li>
+                <li><button class="drop-item" type="button" data-action="impressum"><div class="drop-title">Impressum &amp; Rechtliches</div></button></li>
+              </ul>
+            </div>
+          </div>
+        </header>
+
+        <div class="page-content" data-load="sections/documents/content.html"></div>
+      </div>
+    </section>
+
+    <!-- Konto -->
+    <section id="account" class="section" data-inner-scroll="true" data-title="Konto">
+      <div class="inner-container">
+        <header class="topbar">
+          <div class="brand">
+            <img src="assets/logo/windkompass_logo.png" alt="Logo" />
+            <div class="brand-text">
+              <div class="brand-name">WES WindKompass</div>
+              <div class="brand-sub">Monitoring &amp; Auswertung</div>
+            </div>
+          </div>
+          <div class="actions">
+            <button class="icon-btn" type="button" data-action="toggle-notify" aria-label="Benachrichtigungen">
+              <span class="badge" aria-label="2 Benachrichtigungen">2</span>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2Z" fill="currentColor" opacity=".85"/>
+                <path d="M18 16v-5a6 6 0 1 0-12 0v5l-2 2h16l-2-2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" opacity=".85"/>
+              </svg>
+              <span class="sr-only">Benachrichtigungen</span>
+            </button>
+
+            <button class="icon-btn" type="button" data-action="toggle-menu" aria-label="Menü">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <line x1="4" y1="7" x2="20" y2="7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <line x1="4" y1="17" x2="20" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+              <span class="sr-only">Menü</span>
+            </button>
+
+            <div class="dropdown" data-panel="notify" role="menu" aria-label="Benachrichtigungen">
+              <div class="drop-head">Benachrichtigungen</div>
+              <ul class="drop-list">
+                <li><button class="drop-item" type="button"><div class="drop-title">Monatsberichte sind verfügbar</div><div class="drop-sub">Neue Auswertungen können jetzt geöffnet werden.</div></button></li>
+                <li><button class="drop-item" type="button"><div class="drop-title">Parkbetreuer</div><div class="drop-sub">„Schönen guten Tag …“</div></button></li>
+              </ul>
+            </div>
+
+            <div class="dropdown" data-panel="menu" role="menu" aria-label="Navigation">
+              <div class="drop-head">Navigation</div>
+              <ul class="drop-list">
+                <li><button class="drop-item" type="button" data-target="overview"><div class="drop-title">Übersicht</div></button></li>
+                <li><button class="drop-item" type="button" data-target="turbines"><div class="drop-title">Windenergieanlage</div></button></li>
+                <li><button class="drop-item" type="button" data-target="redispatch"><div class="drop-title">Redispatch</div></button></li>
+                <li><button class="drop-item" type="button" data-target="documents"><div class="drop-title">Dokumente</div></button></li>
+                <li><button class="drop-item" type="button" data-target="account"><div class="drop-title">Konto</div></button></li>
+                <li><hr class="sep"></li>
+                <li><button class="drop-item logout" type="button" data-action="logout"><div class="drop-title">Abmelden</div></button></li>
+                <li><hr class="sep"></li>
+                <li><button class="drop-item" type="button" data-action="impressum"><div class="drop-title">Impressum &amp; Rechtliches</div></button></li>
+              </ul>
+            </div>
+          </div>
+        </header>
+
+        <div class="page-content" style="color:#fff; opacity:.95; padding: 6px 2px;">
+          Konto (Demo)
         </div>
       </div>
     </section>
@@ -365,19 +622,11 @@
       locked: false,
       sections: [],
       sectionIds: [],
-      video: { list: [], idx: 0, fadeMs: 1200, fadeLeadMs: 1200, active: "A" },
-      hoverOpenTimer: null,
-      hoverCloseTimer: null
+      video: { list: [], idx: 0, fadeMs: 1200, fadeLeadMs: 1200, active: "A" }
     };
 
     const el = {
       stack: document.getElementById("sections"),
-      nav: document.getElementById("icon-nav"),
-      navToggle: document.getElementById("nav-toggle"),
-      navPanel: document.getElementById("nav-panel"),
-      navItems: Array.from(document.querySelectorAll(".nav-item[data-target]")),
-      btnLogout: document.getElementById("btn-logout"),
-      btnImpressum: document.getElementById("btn-impressum"),
       bgA: document.getElementById("bgA"),
       bgB: document.getElementById("bgB"),
     };
@@ -388,80 +637,72 @@
       state.sections = Array.from(document.querySelectorAll(".section"));
       state.sectionIds = state.sections.map(s => s.id);
 
-      setupNav();
+      setupHeaderUI();
       setupScrollSnap();
 
       await loadAllSections();
       await setupVideoPlaylist();
 
       goTo(0, false);
-      setActiveNav();
     }
 
-    function setupNav(){
-      // Hover is optional add-on. Click is primary.
-      el.nav.addEventListener("pointerenter", () => {
-        if (!matchMedia("(hover:hover)").matches) return;
-        clearTimeout(state.hoverCloseTimer);
-        state.hoverOpenTimer = setTimeout(() => openNav(true), 160);
-      });
+    function setupHeaderUI(){
+      document.querySelectorAll(".topbar").forEach(topbar => {
+        const actions = topbar.querySelector(".actions");
+        const notifyBtn = actions.querySelector('[data-action="toggle-notify"]');
+        const menuBtn   = actions.querySelector('[data-action="toggle-menu"]');
+        const notifyPanel = actions.querySelector('[data-panel="notify"]');
+        const menuPanel   = actions.querySelector('[data-panel="menu"]');
 
-      el.nav.addEventListener("pointerleave", () => {
-        if (!matchMedia("(hover:hover)").matches) return;
-        clearTimeout(state.hoverOpenTimer);
-        state.hoverCloseTimer = setTimeout(() => {
-          // only close if not manually opened via click (still okay to close)
-          openNav(false);
-        }, 220);
-      });
+        const closeAll = () => {
+          notifyPanel.classList.remove("is-open");
+          menuPanel.classList.remove("is-open");
+        };
 
-      el.navToggle.addEventListener("click", (e) => {
-        e.preventDefault();
-        const isOpen = el.nav.classList.contains("is-open");
-        openNav(!isOpen);
-      });
+        notifyBtn.addEventListener("click", (e) => {
+          e.preventDefault();
+          const willOpen = !notifyPanel.classList.contains("is-open");
+          closeAll();
+          notifyPanel.classList.toggle("is-open", willOpen);
+        });
 
-      el.navItems.forEach(btn => {
-        btn.addEventListener("click", () => {
-          const target = btn.dataset.target;
-          const i = state.sectionIds.indexOf(target);
-          if (i >= 0) goTo(i);
-          openNav(false);
+        menuBtn.addEventListener("click", (e) => {
+          e.preventDefault();
+          const willOpen = !menuPanel.classList.contains("is-open");
+          closeAll();
+          menuPanel.classList.toggle("is-open", willOpen);
+        });
+
+        actions.addEventListener("click", (e) => {
+          const t = e.target.closest("[data-target],[data-action]");
+          if(!t) return;
+
+          const target = t.getAttribute("data-target");
+          const action = t.getAttribute("data-action");
+
+          if (target){
+            const i = state.sectionIds.indexOf(target);
+            if (i >= 0) goTo(i);
+            closeAll();
+          }
+
+          if (action === "logout"){
+            alert("Abmelden (Demo)");
+            closeAll();
+          }
+          if (action === "impressum"){
+            alert("Impressum & Rechtliches (Demo)");
+            closeAll();
+          }
+        });
+
+        window.addEventListener("keydown", (e) => { if (e.key === "Escape") closeAll(); });
+
+        window.addEventListener("click", (e) => {
+          const path = e.composedPath ? e.composedPath() : [];
+          if (!path.includes(actions)) closeAll();
         });
       });
-
-      el.btnLogout.addEventListener("click", () => {
-        // TODO: Logout-Logik hier einhängen
-        alert("Abmelden (Demo)");
-        openNav(false);
-      });
-
-      el.btnImpressum.addEventListener("click", () => {
-        // TODO: Impressum-Seite / Modal / Link
-        alert("Impressum & Rechtliches (Demo)");
-        openNav(false);
-      });
-
-      window.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") openNav(false);
-      });
-
-      window.addEventListener("click", (e) => {
-        if (!el.nav.classList.contains("is-open")) return;
-        const path = e.composedPath ? e.composedPath() : [];
-        const clickedInside = path.includes(el.nav);
-        if (!clickedInside) openNav(false);
-      });
-    }
-
-    function openNav(open){
-      el.nav.classList.toggle("is-open", !!open);
-      el.navToggle.setAttribute("aria-expanded", open ? "true" : "false");
-    }
-
-    function setActiveNav(){
-      const activeId = state.sectionIds[state.index];
-      el.navItems.forEach(b => b.classList.toggle("active", b.dataset.target === activeId));
     }
 
     function setupScrollSnap(){
@@ -487,7 +728,7 @@
     function findInnerScrollable(e){
       const path = e.composedPath ? e.composedPath() : [];
       return path.find(n =>
-        n && n.classList && n.classList.contains("inner-container") &&
+        n && n.classList && n.classList.contains("page-content") &&
         n.scrollHeight > n.clientHeight
       );
     }
@@ -511,19 +752,12 @@
         void el.stack.offsetHeight;
         el.stack.style.transition = "";
       }
-      setActiveNav();
     }
 
     async function loadAllSections(){
-      const inners = Array.from(document.querySelectorAll(".inner-container[data-load]"));
-      for (const inner of inners){
-        const url = inner.dataset.load;
-        await loadHtmlInto(inner, url);
-
-        // Wrap loaded html into readable surface (keeps clean glass container)
-        if (inner.dataset.load && inner.innerHTML && !inner.querySelector(".content-surface")) {
-          inner.innerHTML = `<div class="content-surface">${inner.innerHTML}</div>`;
-        }
+      const targets = Array.from(document.querySelectorAll(".page-content[data-load]"));
+      for (const container of targets){
+        await loadHtmlInto(container, container.dataset.load);
       }
     }
 
@@ -531,13 +765,9 @@
       try{
         const res = await fetch(url, { cache: "no-cache" });
         if(!res.ok) throw new Error(`Fetch failed ${res.status} for ${url}`);
-        const html = await res.text();
-        container.innerHTML = html;
+        container.innerHTML = await res.text();
       }catch(err){
-        container.innerHTML =
-          `<div class="content-surface">
-            <strong>Fehler beim Laden:</strong><br>${escapeHtml(url)}
-           </div>`;
+        container.innerHTML = `<div style="color:#fff; opacity:.9;">Fehler beim Laden: ${escapeHtml(url)}</div>`;
         console.error(err);
       }
     }
@@ -575,7 +805,6 @@
     function attachFadeScheduler(videoEl){
       const onReady = () => scheduleFade(videoEl);
       videoEl.addEventListener("loadedmetadata", onReady, { once:true });
-
       if (videoEl.duration && isFinite(videoEl.duration)) scheduleFade(videoEl);
       videoEl.addEventListener("ended", () => scheduleFade(videoEl));
     }
