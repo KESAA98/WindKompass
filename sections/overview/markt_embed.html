@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Markt (Embed)</title>
+  <title>Monatsmarktwert (Embed)</title>
+
   <style>
     :root{
       --bg:#ffffff;
@@ -22,26 +23,34 @@
     }
 
     *{box-sizing:border-box}
+    html,body{height:100%}
+
     body{
       margin:0;
-      background:var(--bg);
+      background:transparent; /* wichtig fürs Einpassen */
       color:var(--text);
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      overflow:hidden; /* kein Scroll */
     }
 
-    .wrap{max-width:none;margin:0;padding:0;}
-
-    /* Embed: keine Extra-Card im Content-Container */
-    html,body{height:100%;}
-    body{background:transparent;}
-    .panel{border:0;border-radius:0;background:transparent;}
-
+    /* EMBED: keine Außenabstände / keine Card */
+    .wrap{
+      height:100%;
+      max-width:none;
+      margin:0;
+      padding:0;
+    }
 
     .panel{
-      background:var(--card);
-      border:1px solid var(--border);
-      border-radius:16px;
+      height:100%;
+      background:transparent;
+      border:none;
+      border-radius:0;
       overflow:hidden;
+
+      display:flex;
+      flex-direction:column;
+      min-height:0;
     }
 
     .head{
@@ -50,6 +59,7 @@
       align-items:flex-end;
       justify-content:space-between;
       gap:16px;
+      flex:0 0 auto;
     }
     .title{
       margin:0;
@@ -64,22 +74,28 @@
     }
 
     .body{
+      flex:1 1 auto;
+      min-height:0; /* wichtig gegen Scroll */
       display:grid;
       grid-template-columns: 1.65fr 0.85fr;
       border-top:1px solid var(--border);
-      min-height: 420px;
     }
 
+    /* LEFT */
     .left{
       padding:16px 18px 14px 18px;
       position:relative;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      min-height:0;
     }
     .chartTop{
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap:12px;
-      margin-bottom:10px;
+      flex:0 0 auto;
     }
     .legend{
       display:flex;
@@ -89,24 +105,39 @@
       font-size:12px;
       user-select:none;
     }
-    .dot{width:9px; height:9px; border-radius:999px; display:inline-block; margin-right:8px; transform:translateY(1px);}
+    .dot{
+      width:9px;
+      height:9px;
+      border-radius:999px;
+      display:inline-block;
+      margin-right:8px;
+      transform:translateY(1px);
+    }
+
     .canvasWrap{
       position:relative;
       border-radius:12px;
       overflow:hidden;
+      flex:1 1 auto;
+      min-height:0;
     }
-    canvas{width:100%; height:360px; display:block;}
+    canvas{
+      width:100%;
+      height:100%;
+      display:block;
+    }
 
-    /* RECHTS: mittig & clean */
+    /* RIGHT */
     .right{
       padding:18px;
       border-left:1px solid var(--border);
       display:flex;
       flex-direction:column;
-      justify-content:center;    /* vertikal zentriert */
-      align-items:center;        /* horizontal zentriert */
+      justify-content:center;
+      align-items:center;
       gap:18px;
       text-align:center;
+      min-height:0;
     }
 
     .kpi{
@@ -131,14 +162,12 @@
       font-size:12px;
       color:var(--muted);
     }
-
     .divider{
       height:1px;
       width:70%;
       background:var(--border);
       margin:2px 0;
     }
-
     .deltaLine{
       font-size:13px;
       font-weight:600;
@@ -171,24 +200,26 @@
 
     .err{
       display:none;
-      margin:12px 18px 16px 18px;
+      margin:10px 18px 0 18px;
       padding:10px 12px;
       border-radius:12px;
       background:#fff7ed;
       border:1px solid #fed7aa;
       color:#9a3412;
       font-size:12px;
+      flex:0 0 auto;
     }
 
     @media (max-width: 920px){
+      body{ overflow:auto; } /* mobil darf scrollen */
       .body{grid-template-columns:1fr;}
       .right{border-left:none; border-top:1px solid var(--border); align-items:stretch; text-align:left;}
       .kpi{align-items:flex-start;}
       .divider{width:100%;}
-      canvas{height:320px;}
     }
   </style>
 </head>
+
 <body>
   <div class="wrap">
     <div class="panel">
@@ -245,6 +276,7 @@
 
 <script>
 (() => {
+  // Embed liegt unter /sections/overview/ -> Daten liegen bei dir unter /data/
   const PATH_CURRENT = "../../data/price_current_month.json";
   const PATH_PREV    = "../../data/price_prev_month.json";
 
@@ -290,8 +322,8 @@
   function resize(){
     const r = c.getBoundingClientRect();
     const k = dpr();
-    c.width  = Math.round(r.width  * k);
-    c.height = Math.round(r.height * k);
+    c.width  = Math.max(1, Math.round(r.width  * k));
+    c.height = Math.max(1, Math.round(r.height * k));
   }
 
   function to6h(series){
@@ -325,7 +357,6 @@
     elErr.textContent = "";
   }
 
-  // ---- Smooth line (Catmull-Rom -> Bezier) ----
   function smoothPath(points){
     if(points.length < 2) return;
     ctx.beginPath();
@@ -401,7 +432,6 @@
     const xToPx = x => plotX0 + (x - xMin) / (xMax - xMin) * plotW;
     const yToPx = y => plotY0 + (yMax - y) / (yMax - yMin) * plotH;
 
-    // Grid (zarter)
     ctx.lineWidth = 1*k;
     ctx.strokeStyle = colGrid;
     ctx.beginPath();
@@ -412,17 +442,14 @@
     }
     ctx.stroke();
 
-    // Clip plot
     ctx.save();
     ctx.beginPath();
     ctx.rect(plotX0, plotY0, plotW, plotH);
     ctx.clip();
 
-    // Build px points
     const estPx = hasEst ? est.map(p=>({ ...p, px:xToPx(p.x), py:yToPx(p.y) })) : [];
     const spotPx= hasSpot? spot.map(p=>({ ...p, px:xToPx(p.x), py:yToPx(p.y) })) : [];
 
-    // Fill Schätzung (smooth)
     if(hasEst){
       smoothPath(estPx);
       ctx.lineTo(estPx[estPx.length-1].px, plotY0 + plotH);
@@ -432,7 +459,6 @@
       ctx.fill();
     }
 
-    // Spot line (dünner & transparenter)
     if(hasSpot){
       smoothPath(spotPx);
       ctx.strokeStyle = colSpot;
@@ -442,7 +468,6 @@
       ctx.globalAlpha = 1;
     }
 
-    // Est line (leicht dicker)
     if(hasEst){
       smoothPath(estPx);
       ctx.strokeStyle = colEst;
@@ -452,7 +477,6 @@
 
     ctx.restore();
 
-    // X marks
     ctx.fillStyle = colMuted;
     ctx.font = `${11*k}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
     ctx.textAlign="center";
@@ -462,7 +486,6 @@
       ctx.fillText(String(d).padStart(2,"0"), x, plotY0 + plotH + 18*k);
     }
 
-    // Hover: nearest X, show both series
     const estMap = new Map(est.filter(p=>p.label!=="Vormonat").map(p=>[`${p.dd}-${p.mm}-${p.hh}`, p]));
     const base = (hasSpot ? spot : est).filter(p=>p.label!=="Vormonat");
 
@@ -553,9 +576,13 @@
 
       draw(current, prev);
       bindHover();
+
+      // Resize zuverlässig (auch im iframe)
+      const ro = new ResizeObserver(() => draw(current, prev));
+      ro.observe(wrap);
       window.addEventListener("resize", () => draw(current, prev));
     } catch(e){
-      setError("Fehler beim Laden der Daten.");
+      setError("Fehler beim Laden der Daten. (Pfad / JSON prüfen)");
       console.error(e);
     }
   }
