@@ -20,6 +20,7 @@
       display:grid;
       grid-template-columns: 1.65fr 0.85fr;
       gap: 18px;
+      min-height: 0;
     }
 
     .leftCol{
@@ -43,6 +44,7 @@
       border-radius: 0;
       background: transparent;
       display:block;
+      overflow:hidden;
     }
 
     /* Contact blocks (no extra "card" look, just light separators like the embedded pages) */
@@ -54,7 +56,16 @@
       gap: 14px;
       padding: 10px 4px;
       border-left: 1px solid var(--border);
+      min-height: 0;
     }
+
+    .contactTitle{
+      padding-left: 14px;
+      font-size:14px;
+      font-weight:650;
+      letter-spacing:.2px;
+    }
+
     .contactHeader{
       display:flex;
       align-items:center;
@@ -62,8 +73,8 @@
       padding-left: 14px;
     }
     .avatar{
-      width: 44px;
-      height: 44px;
+      width: 54px;
+      height: 54px;
       border-radius: 999px;
       object-fit: cover;
       border: 1px solid rgba(15,23,42,.10);
@@ -94,7 +105,6 @@
       padding: 10px 0;
       border-top: 1px solid rgba(15,23,42,.08);
     }
-    .line:first-child{ border-top: 1px solid rgba(15,23,42,.08); }
 
     .k{ font-size:12px; color:var(--muted); }
     .v, .v a{
@@ -102,6 +112,7 @@
       color: rgba(15,23,42,.92);
       text-decoration:none;
       font-weight:600;
+      text-align:right;
     }
     .v a:hover{ text-decoration: underline; }
 
@@ -109,6 +120,9 @@
       .grid{ grid-template-columns: 1fr; }
       .contact{ border-left: 0; border-top: 1px solid var(--border); padding: 18px 0 0 0; }
       .rightCol{ grid-template-rows: auto auto; }
+      .contactTitle, .contactHeader, .lines{ padding-left: 0; padding-right: 0; }
+      .lines{ padding: 0; }
+      .line{ padding: 10px 0; }
     }
   </style>
 </head>
@@ -116,15 +130,16 @@
   <div class="grid">
     <!-- LINKS: oben Anlagen, unten Markt -->
     <div class="leftCol">
-      <iframe title="Anlage" src="anlagen_embed.html" loading="lazy"></iframe>
-      <iframe title="Markt" src="markt_embed.html" loading="lazy"></iframe>
+      <iframe id="iframeAnlage" title="Anlage" loading="lazy"></iframe>
+      <iframe id="iframeMarkt"  title="Markt"  loading="lazy"></iframe>
     </div>
 
     <!-- RECHTS: Kontakte -->
     <div class="rightCol">
       <section class="contact" aria-label="Parkbetreuer">
+        <div class="contactTitle">Ihre Ansprechpartner</div>
         <div class="contactHeader">
-          <img class="avatar" src="../../assets/profile/user.png" alt="Profil" />
+          <img class="avatar" id="avatar1" alt="Profil" />
           <div class="who">
             <div class="role">Parkbetreuer</div>
             <div class="name">Herr Parkbetreuer</div>
@@ -148,7 +163,7 @@
 
       <section class="contact" aria-label="Direktvermarktung">
         <div class="contactHeader">
-          <img class="avatar" src="../../assets/profile/user.png" alt="Profil" />
+          <img class="avatar" id="avatar2" alt="Profil" />
           <div class="who">
             <div class="role">DV Betreuer</div>
             <div class="name">Herr Direktvermarktungsbetreuer</div>
@@ -171,5 +186,20 @@
       </section>
     </div>
   </div>
+
+  <script>
+    (function(){
+      // robust base: works when content.html is loaded via index OR opened directly
+      const inOverviewFolder = location.pathname.includes("/sections/overview/");
+      const base = inOverviewFolder ? "" : "sections/overview/";
+
+      document.getElementById("iframeAnlage").src = base + "anlagen_embed.html";
+      document.getElementById("iframeMarkt").src  = base + "markt_embed.html";
+
+      const avatarPath = (inOverviewFolder ? "../../" : "") + "assets/profile/user.png";
+      document.getElementById("avatar1").src = avatarPath;
+      document.getElementById("avatar2").src = avatarPath;
+    })();
+  </script>
 </body>
 </html>
