@@ -3,39 +3,44 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Übersicht</title>
+  <title>Übersicht – Ansprechpartner</title>
+
   <style>
     :root{
       --border: rgba(15,23,42,.10);
       --text:#0f172a;
       --muted: rgba(15,23,42,.62);
       --btnBg: rgba(15,23,42,.92);
-      --btnText: #fff;
+      --btnText:#fff;
     }
-    *{ box-sizing:border-box; }
-    html,body{ height:100%; }
-    body{ margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; color:var(--text); }
 
-    /* Fills the existing inner-container without adding extra "cards" */
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; margin:0; }
+    body{
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      color:var(--text);
+      background:transparent;
+    }
+
+    /* GRID */
     .grid{
       height:100%;
       display:grid;
       grid-template-columns: 1.65fr 0.85fr;
-      gap: 18px;
-      min-height:0;
+      gap:18px;
     }
 
     .leftCol{
       display:grid;
       grid-template-rows: 1fr 1fr;
-      gap: 18px;
+      gap:18px;
       min-height:0;
     }
 
     .rightCol{
       display:grid;
       grid-template-rows: 1fr 1fr;
-      gap: 18px;
+      gap:18px;
       min-height:0;
     }
 
@@ -43,56 +48,45 @@
       width:100%;
       height:100%;
       border:0;
-      border-radius:0;
-      background:transparent;
       display:block;
-      overflow:hidden;
+      background:transparent;
     }
 
-    /* Contact blocks (no extra card, just subtle separators) */
+    /* CONTACTS */
     .contact{
-      height:100%;
       display:flex;
       flex-direction:column;
       justify-content:center;
-      padding: 12px 0;
-      border-left: 1px solid var(--border);
-      min-height:0;
+      border-left:1px solid var(--border);
+      padding:12px 0;
     }
 
     .contactTitle{
       text-align:center;
-      font-size:18px;        /* größer */
+      font-size:20px;
       font-weight:650;
-      letter-spacing:.2px;
-      margin-top:6px;        /* etwas höher */
-      margin-bottom:14px;
+      margin-bottom:18px;
     }
 
     .profileBlock{
       display:flex;
       flex-direction:column;
       align-items:center;
-      justify-content:center;
       gap:10px;
-      padding: 0 14px;
+      padding:0 16px;
     }
 
     .avatar{
-      width:110px;           /* viel größer */
-      height:110px;
+      width:120px;
+      height:120px;
       border-radius:999px;
       object-fit:cover;
-      border:1px solid rgba(15,23,42,.10);
+      border:1px solid rgba(15,23,42,.12);
       background:#fff;
     }
 
     .caption{
       text-align:center;
-      display:flex;
-      flex-direction:column;
-      gap:3px;
-      line-height:1.15;
     }
     .name{
       font-size:16px;
@@ -104,145 +98,125 @@
     }
 
     .lines{
+      padding:12px 16px 0 16px;
       display:flex;
       flex-direction:column;
-      gap: 10px;
-      padding: 8px 14px 0 14px;
-      width:100%;
+      gap:10px;
     }
 
     .line{
       display:flex;
       justify-content:space-between;
       align-items:center;
-      gap: 12px;
-      padding: 10px 0;
-      border-top: 1px solid rgba(15,23,42,.08);
+      padding:10px 0;
+      border-top:1px solid rgba(15,23,42,.08);
     }
 
-    .k{ font-size:12px; color:var(--muted); }
+    .k{
+      font-size:12px;
+      color:var(--muted);
+    }
+
     .v, .v a{
       font-size:13px;
-      color: rgba(15,23,42,.92);
-      text-decoration:none;
       font-weight:600;
-      text-align:right;
+      color:rgba(15,23,42,.92);
+      text-decoration:none;
     }
-    .v a:hover{ text-decoration: underline; }
 
     .cta{
-      padding: 12px 14px 0 14px;
       display:flex;
-      justify-content:center;   /* Button mittig */
+      justify-content:center;
+      padding-top:14px;
     }
 
     .btn{
-      appearance:none;
       border:0;
-      cursor:pointer;
-      padding: 10px 14px;
-      border-radius: 999px;
-      background: var(--btnBg);
-      color: var(--btnText);
+      border-radius:999px;
+      padding:10px 18px;
+      background:var(--btnBg);
+      color:var(--btnText);
       font-weight:650;
-      font-size:13px;
+      cursor:pointer;
     }
-    .btn:active{ transform: translateY(1px); }
 
-    @media (max-width: 980px){
-      .grid{ grid-template-columns: 1fr; }
-      .contact{ border-left: 0; border-top: 1px solid var(--border); }
-      .rightCol{ grid-template-rows: auto auto; }
+    @media (max-width:980px){
+      .grid{ grid-template-columns:1fr; }
+      .contact{ border-left:0; border-top:1px solid var(--border); }
+      .rightCol{ grid-template-rows:auto auto; }
     }
   </style>
 </head>
 
 <body>
-  <div class="grid">
-    <!-- LINKS: oben Anlagen, unten Markt -->
-    <div class="leftCol">
-      <iframe id="iframeAnlage" title="Anlage" loading="lazy"></iframe>
-      <iframe id="iframeMarkt"  title="Markt"  loading="lazy"></iframe>
-    </div>
 
-    <!-- RECHTS: Kontakte -->
-    <div class="rightCol">
-      <!-- Parkbetreuer -->
-      <section class="contact" aria-label="Parkbetreuer">
-        <div class="contactTitle">Ihre Ansprechpartner</div>
+<div class="grid">
 
-        <div class="profileBlock">
-          <img class="avatar" id="avatarPark" alt="Profil" />
-          <div class="caption">
-            <div class="name">Herr Parkbetreuer</div>
-            <div class="role">Parkbetreuer</div>
-          </div>
-        </div>
-
-        <div class="lines">
-          <div class="line">
-            <div class="k">E-Mail</div>
-            <div class="v"><a href="mailto:parkbetreuer@wes.example">parkbetreuer@wes.example</a></div>
-          </div>
-          <div class="line">
-            <div class="k">Telefon</div>
-            <div class="v"><a href="tel:+494012345678">+49 40 12345678</a></div>
-          </div>
-        </div>
-
-        <div class="cta">
-          <button class="btn" type="button" onclick="alert('Chat (Demo)')">Zum Chat</button>
-        </div>
-      </section>
-
-      <!-- DV Betreuer -->
-      <section class="contact" aria-label="Direktvermarktung">
-        <div class="profileBlock" style="margin-top:18px;">
-          <img class="avatar" id="avatarDV" alt="Profil" />
-          <div class="caption">
-            <div class="name">Herr Direktvermarktungsbetreuer</div>
-            <div class="role">Direktvermarktung</div>
-          </div>
-        </div>
-
-        <div class="lines">
-          <div class="line">
-            <div class="k">E-Mail</div>
-            <div class="v"><a href="mailto:dv@wes.example">dv@wes.example</a></div>
-          </div>
-          <div class="line">
-            <div class="k">Telefon</div>
-            <div class="v"><a href="tel:+494076543210">+49 40 76543210</a></div>
-          </div>
-        </div>
-
-        <div class="cta">
-          <button class="btn" type="button" onclick="alert('Chat (Demo)')">Zum Chat</button>
-        </div>
-      </section>
-    </div>
+  <!-- LINKS -->
+  <div class="leftCol">
+    <iframe src="/WindKompass/sections/overview/anlagen_embed.html" title="Anlage"></iframe>
+    <iframe src="/WindKompass/sections/overview/markt_embed.html" title="Markt"></iframe>
   </div>
 
-  <script>
-(function(){
-  // GitHub Pages: /<repo>/...  -> repo = "WindKompass"
-  const parts = location.pathname.split("/").filter(Boolean);
-  const repo = parts.length ? parts[0] : "";
-  const root = repo ? `/${repo}/` : "/";
+  <!-- RECHTS -->
+  <div class="rightCol">
 
-  // Embeds
-  document.getElementById("iframeAnlage").src = root + "sections/overview/anlagen_embed.html";
-  document.getElementById("iframeMarkt").src  = root + "sections/overview/markt_embed.html";
+    <!-- Parkbetreuer -->
+    <section class="contact">
+      <div class="contactTitle">Ihre Ansprechpartner</div>
 
-  // Avatar
-  const avatar = root + "assets/profile/user.png";
-  document.getElementById("avatarPark").src = avatar;
-  document.getElementById("avatarDV").src   = avatar;
+      <div class="profileBlock">
+        <img class="avatar" src="/WindKompass/assets/profile/user.png" alt="Profil">
+        <div class="caption">
+          <div class="name">Herr Parkbetreuer</div>
+          <div class="role">Parkbetreuer</div>
+        </div>
+      </div>
 
-  // Debug falls was fehlt
-  document.getElementById("avatarPark").onerror = () => console.log("Avatar fehlt:", avatar);
-})();
-</script>
+      <div class="lines">
+        <div class="line">
+          <div class="k">E-Mail</div>
+          <div class="v">parkbetreuer@wes.example</div>
+        </div>
+        <div class="line">
+          <div class="k">Telefon</div>
+          <div class="v">+49 40 12345678</div>
+        </div>
+      </div>
+
+      <div class="cta">
+        <button class="btn">Zum Chat</button>
+      </div>
+    </section>
+
+    <!-- DV -->
+    <section class="contact">
+      <div class="profileBlock">
+        <img class="avatar" src="/WindKompass/assets/profile/user.png" alt="Profil">
+        <div class="caption">
+          <div class="name">Herr Direktvermarktungsbetreuer</div>
+          <div class="role">Direktvermarktung</div>
+        </div>
+      </div>
+
+      <div class="lines">
+        <div class="line">
+          <div class="k">E-Mail</div>
+          <div class="v">dv@wes.example</div>
+        </div>
+        <div class="line">
+          <div class="k">Telefon</div>
+          <div class="v">+49 40 76543210</div>
+        </div>
+      </div>
+
+      <div class="cta">
+        <button class="btn">Zum Chat</button>
+      </div>
+    </section>
+
+  </div>
+</div>
 
 </body>
 </html>
