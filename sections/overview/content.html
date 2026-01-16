@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Übersicht</title>
+  <style>
+    :root{
+      --border: rgba(15,23,42,.10);
+      --text:#0f172a;
+      --muted: rgba(15,23,42,.62);
+    }
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{ margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; color:var(--text); }
+
+    /* Fills the existing inner-container without adding extra "cards" */
+    .grid{
+      height:100%;
+      display:grid;
+      grid-template-columns: 1.65fr 0.85fr;
+      gap: 18px;
+    }
+
+    .leftCol{
+      display:grid;
+      grid-template-rows: 1fr 1fr;
+      gap: 18px;
+      min-height: 0;
+    }
+
+    .rightCol{
+      display:grid;
+      grid-template-rows: 1fr 1fr;
+      gap: 18px;
+      min-height: 0;
+    }
+
+    iframe{
+      width:100%;
+      height:100%;
+      border:0;
+      border-radius: 0;
+      background: transparent;
+      display:block;
+    }
+
+    /* Contact blocks (no extra "card" look, just light separators like the embedded pages) */
+    .contact{
+      height:100%;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      gap: 14px;
+      padding: 10px 4px;
+      border-left: 1px solid var(--border);
+    }
+    .contactHeader{
+      display:flex;
+      align-items:center;
+      gap: 12px;
+      padding-left: 14px;
+    }
+    .avatar{
+      width: 44px;
+      height: 44px;
+      border-radius: 999px;
+      object-fit: cover;
+      border: 1px solid rgba(15,23,42,.10);
+      background:#fff;
+      flex: 0 0 auto;
+    }
+    .who{
+      display:flex;
+      flex-direction:column;
+      gap: 3px;
+      min-width: 0;
+    }
+    .role{ font-size:12px; color:var(--muted); }
+    .name{ font-size:16px; font-weight:650; line-height:1.15; }
+
+    .lines{
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+      padding: 0 14px;
+    }
+
+    .line{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap: 12px;
+      padding: 10px 0;
+      border-top: 1px solid rgba(15,23,42,.08);
+    }
+    .line:first-child{ border-top: 1px solid rgba(15,23,42,.08); }
+
+    .k{ font-size:12px; color:var(--muted); }
+    .v, .v a{
+      font-size:13px;
+      color: rgba(15,23,42,.92);
+      text-decoration:none;
+      font-weight:600;
+    }
+    .v a:hover{ text-decoration: underline; }
+
+    @media (max-width: 980px){
+      .grid{ grid-template-columns: 1fr; }
+      .contact{ border-left: 0; border-top: 1px solid var(--border); padding: 18px 0 0 0; }
+      .rightCol{ grid-template-rows: auto auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="grid">
+    <!-- LINKS: oben Anlagen, unten Markt -->
+    <div class="leftCol">
+      <iframe title="Anlage" src="anlagen_embed.html" loading="lazy"></iframe>
+      <iframe title="Markt" src="markt_embed.html" loading="lazy"></iframe>
+    </div>
+
+    <!-- RECHTS: Kontakte -->
+    <div class="rightCol">
+      <section class="contact" aria-label="Parkbetreuer">
+        <div class="contactHeader">
+          <img class="avatar" src="../../assets/profile/user.png" alt="Profil" />
+          <div class="who">
+            <div class="role">Parkbetreuer</div>
+            <div class="name">Herr Parkbetreuer</div>
+          </div>
+        </div>
+        <div class="lines">
+          <div class="line">
+            <div class="k">E-Mail</div>
+            <div class="v"><a href="mailto:parkbetreuer@wes.example">parkbetreuer@wes.example</a></div>
+          </div>
+          <div class="line">
+            <div class="k">Telefon</div>
+            <div class="v"><a href="tel:+494012345678">+49 40 12345678</a></div>
+          </div>
+          <div class="line">
+            <div class="k">Chat</div>
+            <div class="v"><a href="#" onclick="alert('Chat (Demo)'); return false;">Zum Chat</a></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="contact" aria-label="Direktvermarktung">
+        <div class="contactHeader">
+          <img class="avatar" src="../../assets/profile/user.png" alt="Profil" />
+          <div class="who">
+            <div class="role">DV Betreuer</div>
+            <div class="name">Herr Direktvermarktungsbetreuer</div>
+          </div>
+        </div>
+        <div class="lines">
+          <div class="line">
+            <div class="k">E-Mail</div>
+            <div class="v"><a href="mailto:dv@wes.example">dv@wes.example</a></div>
+          </div>
+          <div class="line">
+            <div class="k">Telefon</div>
+            <div class="v"><a href="tel:+494076543210">+49 40 76543210</a></div>
+          </div>
+          <div class="line">
+            <div class="k">Chat</div>
+            <div class="v"><a href="#" onclick="alert('Chat (Demo)'); return false;">Zum Chat</a></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Markt (Embed)</title>
+  <style>
+    :root{
+      --bg:#ffffff;
+      --card:#ffffff;
+      --border:#e9eef3;
+      --text:#0f172a;
+      --muted:#6b7280;
+      --grid:#f3f5f8;
+
+      --spot:#6b7280;               /* Spot (Day-Ahead) */
+      --est:#16a34a;                /* Marktwert (Schätzung) */
+      --estFill:rgba(22,163,74,.08);
+
+      --tipBg:#0f172a;
+      --tipText:#ffffff;
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+
+    .wrap{max-width:none;margin:0;padding:0;}
+
+    /* Embed: keine Extra-Card im Content-Container */
+    html,body{height:100%;}
+    body{background:transparent;}
+    .panel{border:0;border-radius:0;background:transparent;}
+
+
+    .panel{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:16px;
+      overflow:hidden;
+    }
+
+    .head{
+      padding:18px 18px 14px 18px;
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:16px;
+    }
+    .title{
+      margin:0;
+      font-size:18px;
+      font-weight:650;
+      letter-spacing:.2px;
+    }
+    .sub{
+      margin-top:6px;
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    .body{
+      display:grid;
+      grid-template-columns: 1.65fr 0.85fr;
+      border-top:1px solid var(--border);
+      min-height: 420px;
+    }
+
+    .left{
+      padding:16px 18px 14px 18px;
+      position:relative;
+    }
+    .chartTop{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:10px;
+    }
+    .legend{
+      display:flex;
+      gap:14px;
+      align-items:center;
+      color:var(--muted);
+      font-size:12px;
+      user-select:none;
+    }
+    .dot{width:9px; height:9px; border-radius:999px; display:inline-block; margin-right:8px; transform:translateY(1px);}
+    .canvasWrap{
+      position:relative;
+      border-radius:12px;
+      overflow:hidden;
+    }
+    canvas{width:100%; height:360px; display:block;}
+
+    /* RECHTS: mittig & clean */
+    .right{
+      padding:18px;
+      border-left:1px solid var(--border);
+      display:flex;
+      flex-direction:column;
+      justify-content:center;    /* vertikal zentriert */
+      align-items:center;        /* horizontal zentriert */
+      gap:18px;
+      text-align:center;
+    }
+
+    .kpi{
+      width:100%;
+      max-width:320px;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      align-items:center;
+    }
+    .kpiLabel{
+      font-size:12px;
+      color:var(--muted);
+      letter-spacing:.2px;
+    }
+    .kpiValue{
+      font-size:26px;
+      font-weight:600;
+      line-height:1.1;
+    }
+    .kpiSub{
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    .divider{
+      height:1px;
+      width:70%;
+      background:var(--border);
+      margin:2px 0;
+    }
+
+    .deltaLine{
+      font-size:13px;
+      font-weight:600;
+      color:var(--text);
+    }
+
+    .tip{
+      position:absolute;
+      pointer-events:none;
+      transform:translate(-50%, calc(-100% - 10px));
+      background:var(--tipBg);
+      color:var(--tipText);
+      padding:7px 9px;
+      border-radius:10px;
+      font-size:12px;
+      white-space:nowrap;
+      box-shadow:0 10px 26px rgba(0,0,0,.18);
+      display:none;
+      z-index:5;
+    }
+    .tip:after{
+      content:"";
+      position:absolute;
+      left:50%;
+      bottom:-6px;
+      transform:translateX(-50%);
+      border:6px solid transparent;
+      border-top-color:var(--tipBg);
+    }
+
+    .err{
+      display:none;
+      margin:12px 18px 16px 18px;
+      padding:10px 12px;
+      border-radius:12px;
+      background:#fff7ed;
+      border:1px solid #fed7aa;
+      color:#9a3412;
+      font-size:12px;
+    }
+
+    @media (max-width: 920px){
+      .body{grid-template-columns:1fr;}
+      .right{border-left:none; border-top:1px solid var(--border); align-items:stretch; text-align:left;}
+      .kpi{align-items:flex-start;}
+      .divider{width:100%;}
+      canvas{height:320px;}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="panel">
+      <div class="head">
+        <div>
+          <h1 class="title">Monatsmarktwert Wind Onshore</h1>
+          <div class="sub" id="subline">–</div>
+        </div>
+      </div>
+
+      <div class="body">
+        <section class="left">
+          <div class="chartTop">
+            <div class="legend">
+              <span><span class="dot" style="background:var(--spot)"></span>Spot (Day-Ahead)</span>
+              <span><span class="dot" style="background:var(--est)"></span>Marktwert (Schätzung)</span>
+            </div>
+          </div>
+
+          <div class="canvasWrap" id="canvasWrap">
+            <canvas id="chart"></canvas>
+            <div class="tip" id="tip"></div>
+          </div>
+        </section>
+
+        <aside class="right" aria-label="Monatswerte">
+          <div class="kpi">
+            <div class="kpiLabel">Spot (Monat)</div>
+            <div class="kpiValue" id="kpiSpot" style="color:var(--spot)">–</div>
+            <div class="kpiSub" id="kpiSpotSub">–</div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="kpi">
+            <div class="kpiLabel">Marktwert (Schätzung)</div>
+            <div class="kpiValue" id="kpiEst" style="color:var(--est)">–</div>
+            <div class="kpiSub" id="kpiEstSub">–</div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="kpi">
+            <div class="kpiLabel">Vergleich</div>
+            <div class="deltaLine" id="kpiDelta">–</div>
+            <div class="kpiSub" id="kpiPrev">–</div>
+          </div>
+        </aside>
+      </div>
+
+      <div class="err" id="err"></div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const PATH_CURRENT = "../../data/price_current_month.json";
+  const PATH_PREV    = "../../data/price_prev_month.json";
+
+  const elSub = document.getElementById("subline");
+  const elErr = document.getElementById("err");
+
+  const elKpiSpot = document.getElementById("kpiSpot");
+  const elKpiSpotSub = document.getElementById("kpiSpotSub");
+  const elKpiEst = document.getElementById("kpiEst");
+  const elKpiEstSub = document.getElementById("kpiEstSub");
+  const elKpiDelta = document.getElementById("kpiDelta");
+  const elKpiPrev  = document.getElementById("kpiPrev");
+
+  const wrap = document.getElementById("canvasWrap");
+  const tip = document.getElementById("tip");
+  const c = document.getElementById("chart");
+  const ctx = c.getContext("2d");
+
+  const dpr = () => Math.max(1, window.devicePixelRatio || 1);
+
+  const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+  const monthLabel = (yyyyMm) => {
+    const [y,m] = (yyyyMm || "").split("-").map(Number);
+    if(!y || !m) return "–";
+    return `${MONTHS[m-1]} ${y}`;
+  };
+
+  const eurMwhToCtKwh = (v) => (v == null || !isFinite(v) ? null : v * 0.1);
+  const fmtCt = (v) => (v == null || !isFinite(v) ? "–" : `${v.toFixed(2).replace(".", ",")} ct/kWh`);
+
+  function parseLabel(label){
+    const m = (label || "").match(/^(\d{2})\.(\d{2})\s+(\d{2}):00$/);
+    if(!m) return null;
+    return { dd:+m[1], mm:+m[2], hh:+m[3] };
+  }
+
+  async function loadJson(url){
+    const r = await fetch(url + `?v=${Date.now()}`, { cache:"no-store" });
+    if(!r.ok) throw new Error(`Fetch ${url} failed: ${r.status}`);
+    return await r.json();
+  }
+
+  function resize(){
+    const r = c.getBoundingClientRect();
+    const k = dpr();
+    c.width  = Math.round(r.width  * k);
+    c.height = Math.round(r.height * k);
+  }
+
+  function to6h(series){
+    const out = [];
+    for(const p of (series || [])){
+      const t = parseLabel(p.label);
+      if(!t) continue;
+      const y = +p.value;
+      if(!isFinite(y)) continue;
+      out.push({
+        x: (t.dd - 1) + (t.hh/24),
+        y, dd:t.dd, mm:t.mm, hh:t.hh,
+        label:p.label
+      });
+    }
+    out.sort((a,b)=>a.x-b.x);
+    return out;
+  }
+
+  function lastPoint(series){
+    const s = to6h(series);
+    return s.length ? s[s.length-1] : null;
+  }
+
+  function setError(msg){
+    elErr.style.display = "block";
+    elErr.textContent = msg;
+  }
+  function clearError(){
+    elErr.style.display = "none";
+    elErr.textContent = "";
+  }
+
+  // ---- Smooth line (Catmull-Rom -> Bezier) ----
+  function smoothPath(points){
+    if(points.length < 2) return;
+    ctx.beginPath();
+    ctx.moveTo(points[0].px, points[0].py);
+
+    for(let i=0;i<points.length-1;i++){
+      const p0 = points[i-1] || points[i];
+      const p1 = points[i];
+      const p2 = points[i+1];
+      const p3 = points[i+2] || p2;
+
+      const c1x = p1.px + (p2.px - p0.px) / 6;
+      const c1y = p1.py + (p2.py - p0.py) / 6;
+      const c2x = p2.px - (p3.px - p1.px) / 6;
+      const c2y = p2.py - (p3.py - p1.py) / 6;
+
+      ctx.bezierCurveTo(c1x,c1y,c2x,c2y,p2.px,p2.py);
+    }
+  }
+
+  function draw(current, prev){
+    resize();
+    ctx.setTransform(1,0,0,1,0,0);
+    ctx.clearRect(0,0,c.width,c.height);
+
+    const k = dpr();
+    const W = c.width, H = c.height;
+
+    const css = getComputedStyle(document.documentElement);
+    const colGrid = css.getPropertyValue("--grid").trim();
+    const colSpot = css.getPropertyValue("--spot").trim();
+    const colEst  = css.getPropertyValue("--est").trim();
+    const colFill = css.getPropertyValue("--estFill").trim();
+    const colMuted = css.getPropertyValue("--muted").trim();
+
+    const padL = 12*k, padR = 10*k, padT = 10*k, padB = 26*k;
+    const plotX0 = padL, plotY0 = padT;
+    const plotW = W - padL - padR;
+    const plotH = H - padT - padB;
+
+    let spot = to6h(current.series_6h_spot);
+    let est  = to6h(current.series_6h);
+
+    const prevSpotLast = lastPoint(prev.series_6h_spot);
+    const prevEstLast  = lastPoint(prev.series_6h);
+
+    if(prevSpotLast && spot.length) spot = [{...prevSpotLast, x:-0.25, label:"Vormonat"}, ...spot];
+    if(prevEstLast  && est.length)  est  = [{...prevEstLast,  x:-0.25, label:"Vormonat"}, ...est];
+
+    const hasSpot = spot.length >= 2;
+    const hasEst  = est.length  >= 2;
+
+    if(!hasSpot && !hasEst){
+      setError("Keine Daten vorhanden.");
+      return;
+    }
+    clearError();
+
+    const [yy, mm] = (current.month || "").split("-").map(Number);
+    const dim = new Date(yy, mm, 0).getDate();
+
+    const xMin = -0.5;
+    const xMax = (dim - 1) + 18/24;
+
+    const yAll = []
+      .concat(hasSpot ? spot.map(p=>p.y) : [])
+      .concat(hasEst  ? est.map(p=>p.y)  : []);
+    let yMin = Math.min(...yAll);
+    let yMax = Math.max(...yAll);
+    const padY = (yMax - yMin) * 0.14 || 8;
+    yMin -= padY; yMax += padY;
+
+    const xToPx = x => plotX0 + (x - xMin) / (xMax - xMin) * plotW;
+    const yToPx = y => plotY0 + (yMax - y) / (yMax - yMin) * plotH;
+
+    // Grid (zarter)
+    ctx.lineWidth = 1*k;
+    ctx.strokeStyle = colGrid;
+    ctx.beginPath();
+    for(let i=0;i<=4;i++){
+      const gy = plotY0 + (plotH/4)*i;
+      ctx.moveTo(plotX0, gy);
+      ctx.lineTo(plotX0 + plotW, gy);
+    }
+    ctx.stroke();
+
+    // Clip plot
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(plotX0, plotY0, plotW, plotH);
+    ctx.clip();
+
+    // Build px points
+    const estPx = hasEst ? est.map(p=>({ ...p, px:xToPx(p.x), py:yToPx(p.y) })) : [];
+    const spotPx= hasSpot? spot.map(p=>({ ...p, px:xToPx(p.x), py:yToPx(p.y) })) : [];
+
+    // Fill Schätzung (smooth)
+    if(hasEst){
+      smoothPath(estPx);
+      ctx.lineTo(estPx[estPx.length-1].px, plotY0 + plotH);
+      ctx.lineTo(estPx[0].px, plotY0 + plotH);
+      ctx.closePath();
+      ctx.fillStyle = colFill;
+      ctx.fill();
+    }
+
+    // Spot line (dünner & transparenter)
+    if(hasSpot){
+      smoothPath(spotPx);
+      ctx.strokeStyle = colSpot;
+      ctx.globalAlpha = 0.7;
+      ctx.lineWidth = 1.6*k;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    // Est line (leicht dicker)
+    if(hasEst){
+      smoothPath(estPx);
+      ctx.strokeStyle = colEst;
+      ctx.lineWidth = 2.0*k;
+      ctx.stroke();
+    }
+
+    ctx.restore();
+
+    // X marks
+    ctx.fillStyle = colMuted;
+    ctx.font = `${11*k}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+    ctx.textAlign="center";
+    const marks = [1,8,15,22,dim].filter((v,i,a)=>a.indexOf(v)===i);
+    for(const d of marks){
+      const x = xToPx((d-1)+12/24);
+      ctx.fillText(String(d).padStart(2,"0"), x, plotY0 + plotH + 18*k);
+    }
+
+    // Hover: nearest X, show both series
+    const estMap = new Map(est.filter(p=>p.label!=="Vormonat").map(p=>[`${p.dd}-${p.mm}-${p.hh}`, p]));
+    const base = (hasSpot ? spot : est).filter(p=>p.label!=="Vormonat");
+
+    const pts = base.map(p=>{
+      const key = `${p.dd}-${p.mm}-${p.hh}`;
+      const e = estMap.get(key);
+      const spotCt = hasSpot ? eurMwhToCtKwh(p.y) : null;
+      const estCt  = e ? eurMwhToCtKwh(e.y) : null;
+      const yUse = (hasSpot ? p.y : (e ? e.y : p.y));
+      return {
+        px:xToPx(p.x),
+        py:yToPx(yUse),
+        dd:p.dd, mm:p.mm, hh:p.hh,
+        spotCt, estCt
+      };
+    });
+
+    window.__mw_pts = pts;
+    window.__mw_xs  = pts.map(p=>p.px);
+  }
+
+  let hoverBound = false;
+  function bindHover(){
+    if(hoverBound) return;
+    hoverBound = true;
+
+    wrap.addEventListener("mousemove", (ev) => {
+      const k = dpr();
+      const rect = wrap.getBoundingClientRect();
+      const mx = (ev.clientX - rect.left) * k;
+
+      const pts = window.__mw_pts || [];
+      const xs  = window.__mw_xs  || [];
+      if(!pts.length){ tip.style.display="none"; return; }
+
+      let bi=-1, bd=Infinity;
+      for(let i=0;i<xs.length;i++){
+        const d = Math.abs(xs[i]-mx);
+        if(d<bd){ bd=d; bi=i; }
+      }
+
+      const tol = 18*k;
+      if(bi>=0 && bd<=tol){
+        const p = pts[bi];
+        const head = `${String(p.dd).padStart(2,"0")}.${String(p.mm).padStart(2,"0")} ${String(p.hh).padStart(2,"0")}:00`;
+        const a = `Spot: ${fmtCt(p.spotCt)}`;
+        const b = `Marktwert: ${fmtCt(p.estCt)}`;
+        tip.textContent = `${head} · ${a} · ${b}`;
+        tip.style.display="block";
+        tip.style.left = `${(p.px / k)}px`;
+        tip.style.top  = `${(p.py / k)}px`;
+      } else {
+        tip.style.display="none";
+      }
+    });
+
+    wrap.addEventListener("mouseleave", ()=> tip.style.display="none");
+  }
+
+  async function init(){
+    try{
+      const [current, prev] = await Promise.all([loadJson(PATH_CURRENT), loadJson(PATH_PREV)]);
+
+      elSub.textContent = monthLabel(current.month);
+
+      const spotCt = eurMwhToCtKwh(current.estimate_spot_eur_mwh);
+      const estCt  = eurMwhToCtKwh(current.estimate_eur_mwh);
+
+      const prevEstCt = eurMwhToCtKwh(
+        (prev.official_available && prev.official_eur_mwh != null) ? prev.official_eur_mwh : prev.estimate_eur_mwh
+      );
+
+      elKpiSpot.textContent = fmtCt(spotCt);
+      elKpiSpotSub.textContent = `${monthLabel(current.month)}`;
+
+      elKpiEst.textContent = fmtCt(estCt);
+      elKpiEstSub.textContent = `${monthLabel(current.month)}`;
+
+      if(estCt != null && prevEstCt != null){
+        const d = estCt - prevEstCt;
+        const arrow = d > 0 ? "↑" : (d < 0 ? "↓" : "→");
+        elKpiDelta.textContent = `${arrow} ${fmtCt(Math.abs(d))} zum Vormonat`;
+        elKpiPrev.textContent  = `Vormonat: ${fmtCt(prevEstCt)} · ${monthLabel(prev.month)}`;
+      } else {
+        elKpiDelta.textContent = "–";
+        elKpiPrev.textContent  = `Vormonat: ${fmtCt(prevEstCt)} · ${monthLabel(prev.month)}`;
+      }
+
+      draw(current, prev);
+      bindHover();
+      window.addEventListener("resize", () => draw(current, prev));
+    } catch(e){
+      setError("Fehler beim Laden der Daten.");
+      console.error(e);
+    }
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
