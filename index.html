@@ -7,31 +7,39 @@
 
   <style>
     :root{
-      --pad: 22px;
-      --inner-max: 1100px;
-
-      /* fixed topbar */
+      /* layout */
       --topbar-h: 64px;
+      --page-pad-x: 28px;
+      --page-pad-y: 28px;
 
-      /* content glass */
-      --glass-bg: rgba(255,255,255,.10);
-      --glass-border: rgba(255,255,255,.18);
-      --glass-blur: blur(12px);
-      --shadow: 0 14px 40px rgba(0,0,0,.28);
+      /* content sizing */
+      --inner-max: 1440px;           /* breiter */
+      --inner-pad-x: 22px;
+      --inner-pad-y: 44px;           /* oben/unten doppelt so viel */
 
-      --bg-overlay: rgba(0,0,0,.42);
+      /* clean white surfaces */
+      --surface: rgba(255,255,255,.86);   /* weiss + transparent */
+      --surface-strong: rgba(255,255,255,.92);
+      --border: rgba(15,23,42,.10);
+      --shadow: 0 18px 40px rgba(0,0,0,.18);
 
+      /* bg */
+      --bg-overlay: rgba(0,0,0,.30);
+
+      /* motion */
       --snap-ms: 520ms;
       --fade-ms: 1200ms;
 
-      /* white panels */
-      --panel-bg: #fff;
-      --panel-text: #0f172a;
-      --panel-border: rgba(15,23,42,.10);
-      --panel-shadow: 0 14px 30px rgba(0,0,0,.22);
+      /* text */
+      --text: #0f172a;
+      --muted: rgba(15,23,42,.62);
 
-      --btn-bg: rgba(15,23,42,.06);
-      --btn-bg-hover: rgba(15,23,42,.10);
+      /* controls */
+      --btn: rgba(15,23,42,.05);
+      --btn-hover: rgba(15,23,42,.08);
+      --item-hover: rgba(15,23,42,.04);
+      --danger: rgba(225,29,72,.10);
+      --danger-hover: rgba(225,29,72,.14);
     }
 
     *{ box-sizing:border-box; }
@@ -41,7 +49,6 @@
       overflow:hidden;
       background:#000;
     }
-
     .sr-only{
       position:absolute; width:1px; height:1px; padding:0; margin:-1px;
       overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
@@ -59,85 +66,121 @@
     #video-bg video.is-visible{ opacity:1; }
     #video-bg .bg-overlay{ position:absolute; inset:0; background: var(--bg-overlay); }
 
-    /* GLOBAL TOPBAR (full width, sticky/fixed) */
+    /* GLOBAL TOPBAR (clean, no logo bubble) */
     #topbar{
-      position: fixed;
-      top: 0; left: 0; right: 0;
+      position:fixed;
+      top:0; left:0; right:0;
       height: var(--topbar-h);
       z-index: 100;
 
-      background: var(--panel-bg);
-      color: var(--panel-text);
-      border-bottom: 1px solid var(--panel-border);
-      box-shadow: var(--panel-shadow);
+      background: rgba(255,255,255,.94);
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 10px 24px rgba(0,0,0,.12);
 
       display:flex;
       align-items:center;
       justify-content:space-between;
-      padding: 10px 16px;
-      gap: 12px;
+      padding: 10px var(--page-pad-x);
+      color: var(--text);
     }
 
     .brand{
       display:flex;
       align-items:center;
-      gap: 10px;
+      gap: 12px;
       min-width: 0;
     }
     .brand img{
       width: 38px;
       height: 38px;
       object-fit: contain;
-      border-radius: 10px;
-      background: #fff;
-      border: 1px solid rgba(15,23,42,.08);
-      flex: 0 0 auto;
+      display:block;
     }
-    .brand-text{
+    .brand-title{
       display:flex;
       flex-direction:column;
-      gap: 2px;
-      min-width: 0;
+      gap:2px;
+      min-width:0;
     }
-    .brand-name{
-      font-weight: 650;
+    .brand-title .name{
       font-size: 14px;
-      line-height: 1.1;
+      font-weight: 600;
+      letter-spacing: .01em;
       white-space: nowrap;
       overflow:hidden;
       text-overflow: ellipsis;
     }
-    .brand-sub{
+    .brand-title .sub{
       font-size: 12px;
-      opacity: .70;
+      color: var(--muted);
       white-space: nowrap;
       overflow:hidden;
       text-overflow: ellipsis;
     }
 
-    .actions{
+    .right{
       display:flex;
       align-items:center;
-      gap: 8px;
-      flex: 0 0 auto;
+      gap: 10px;
       position:relative;
     }
 
-    .icon-btn{
-      width: 42px;
-      height: 42px;
-      border-radius: 12px;
+    /* profile / weather box */
+    .profilebox{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+
+      padding: 6px 10px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(15,23,42,.03);
+    }
+    .profilebox img{
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      object-fit: cover;
+      display:block;
       border: 1px solid rgba(15,23,42,.10);
-      background: var(--btn-bg);
+      background:#fff;
+    }
+    .metas{
+      display:flex;
+      flex-direction:column;
+      line-height: 1.05;
+      gap: 4px;
+      padding-right: 2px;
+    }
+    .metas .user{
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      opacity: .92;
+      white-space: nowrap;
+    }
+    .metas .wx{
+      font-size: 12px;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .icon-btn{
+      width: 40px;
+      height: 40px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: var(--btn);
       cursor:pointer;
       display:grid;
       place-items:center;
       transition: background 140ms ease, transform 140ms ease;
       position:relative;
       padding:0;
+      color: var(--text);
     }
-    .icon-btn:hover{ background: var(--btn-bg-hover); transform: translateY(-1px); }
-    .icon-btn:focus{ outline: 2px solid rgba(15,23,42,.20); outline-offset: 2px; }
+    .icon-btn:hover{ background: var(--btn-hover); transform: translateY(-1px); }
+    .icon-btn:focus{ outline: 2px solid rgba(15,23,42,.18); outline-offset: 2px; }
     .icon-btn svg{ display:block; }
 
     .badge{
@@ -154,21 +197,21 @@
       line-height: 18px;
       font-weight: 700;
       text-align:center;
-      box-shadow: 0 8px 18px rgba(225,29,72,.28);
+      box-shadow: 0 8px 18px rgba(225,29,72,.22);
     }
 
-    /* dropdowns (below topbar, right aligned) */
+    /* dropdowns (light + clean) */
     .dropdown{
       position: fixed;
       top: calc(var(--topbar-h) + 10px);
-      right: 16px;
-      width: 320px;
+      right: var(--page-pad-x);
+      width: 340px;
 
-      background: var(--panel-bg);
-      color: var(--panel-text);
-      border: 1px solid var(--panel-border);
+      background: var(--surface-strong);
+      color: var(--text);
+      border: 1px solid var(--border);
       border-radius: 16px;
-      box-shadow: var(--panel-shadow);
+      box-shadow: var(--shadow);
 
       opacity: 0;
       pointer-events: none;
@@ -182,84 +225,82 @@
       pointer-events: auto;
       transform: translateY(0);
     }
-
     .drop-head{
-      padding: 12px 12px 10px 12px;
+      padding: 12px 14px 10px 14px;
       font-size: 12px;
       letter-spacing: .06em;
       text-transform: uppercase;
-      opacity: .75;
+      color: rgba(15,23,42,.55);
       border-bottom: 1px solid rgba(15,23,42,.08);
+      background: rgba(255,255,255,.65);
     }
-
     .drop-list{
       list-style:none;
       margin:0;
-      padding: 6px;
+      padding: 8px;
       display:flex;
       flex-direction:column;
-      gap: 6px;
+      gap: 4px;
     }
-
     .drop-item{
       width:100%;
       border: 0;
       border-radius: 12px;
       padding: 10px 10px;
-      background: rgba(15,23,42,.04);
+      background: transparent;
       cursor:pointer;
       text-align:left;
-      color: var(--panel-text);
-      transition: background 140ms ease, transform 140ms ease;
+      color: var(--text);
+      transition: background 140ms ease;
       display:flex;
       flex-direction:column;
       gap: 4px;
     }
-    .drop-item:hover{ background: rgba(15,23,42,.07); transform: translateY(-1px); }
-
-    .drop-title{ font-weight: 650; font-size: 13px; }
-    .drop-sub{ font-size: 12px; opacity: .72; }
+    .drop-item:hover{ background: var(--item-hover); }
+    .drop-title{ font-weight: 600; font-size: 13px; }
+    .drop-sub{ font-size: 12px; color: var(--muted); }
 
     .sep{
       height:1px;
       background: rgba(15,23,42,.10);
-      margin: 4px 6px;
+      margin: 6px 8px;
       border:0;
     }
-
-    .drop-item.logout{ background: rgba(225,29,72,.08); }
-    .drop-item.logout:hover{ background: rgba(225,29,72,.12); }
+    .drop-item.logout{ background: var(--danger); }
+    .drop-item.logout:hover{ background: var(--danger-hover); }
 
     /* SECTIONS STACK */
     #sections{
       position:fixed;
-      inset: 0;
+      inset:0;
       transform: translateY(0);
       transition: transform var(--snap-ms) cubic-bezier(.2,.9,.2,1);
       will-change: transform;
     }
     .section{
       height:100vh;
-      padding: calc(var(--topbar-h) + var(--pad)) var(--pad) var(--pad) var(--pad);
+      padding:
+        calc(var(--topbar-h) + var(--page-pad-y))
+        var(--page-pad-x)
+        var(--page-pad-y)
+        var(--page-pad-x);
       display:flex;
       align-items:center;
       justify-content:center;
     }
 
-    /* CONTENT CONTAINER */
+    /* CONTENT CONTAINER (white/translucent + wider + more vertical padding) */
     .inner-container{
       width: min(var(--inner-max), 100%);
-      height: calc(100vh - (var(--topbar-h) + (var(--pad) * 2)));
-      border-radius: 18px;
-      border: 1px solid var(--glass-border);
-      background: var(--glass-bg);
-      backdrop-filter: var(--glass-blur);
-      -webkit-backdrop-filter: var(--glass-blur);
+      height: calc(100vh - (var(--topbar-h) + (var(--page-pad-y) * 2)));
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,.55);
+      background: var(--surface);
       box-shadow: var(--shadow);
       overflow:hidden;
       position:relative;
-      padding: 18px;
-      color:#fff;
+      padding: var(--inner-pad-y) var(--inner-pad-x);
+      color: var(--text);
     }
 
     .page-content{ height:100%; overflow:hidden; }
@@ -269,9 +310,11 @@
       padding-right: 10px;
     }
 
-    @media (max-width: 520px){
-      .dropdown{ width: min(320px, calc(100vw - 32px)); right: 16px; }
-      .brand-sub{ display:none; }
+    @media (max-width: 640px){
+      :root{ --page-pad-x: 14px; --page-pad-y: 16px; --inner-pad-y: 34px; }
+      .brand-title .sub{ display:none; }
+      .dropdown{ width: min(340px, calc(100vw - 28px)); right: 14px; }
+      .profilebox{ display:none; }
     }
   </style>
 </head>
@@ -283,18 +326,28 @@
     <div class="bg-overlay"></div>
   </div>
 
-  <!-- GLOBAL TOPBAR -->
+  <!-- TOPBAR -->
   <header id="topbar">
     <div class="brand">
-      <!-- PNG Logo: Pfad/Name anpassen -->
-      <img src="assets/logo/windkompass_logo.png" alt="Logo" />
-      <div class="brand-text">
-        <div class="brand-name">WES WindKompass</div>
-        <div class="brand-sub">Monitoring &amp; Auswertung</div>
+      <!-- PNG -->
+      <img src="assets/logo/windkompass_logo.png" alt="WES WindKompass Logo" />
+      <div class="brand-title">
+        <div class="name">WES WindKompass</div>
+        <div class="sub">Monitoring &amp; Auswertung</div>
       </div>
     </div>
 
-    <div class="actions" id="topbar-actions">
+    <div class="right" id="topbar-actions">
+      <!-- profile + wind/temp -->
+      <div class="profilebox">
+        <img src="assets/profile/user.png" alt="Profil" />
+        <div class="metas">
+          <div class="user">Kevin</div>
+          <div class="wx">🌬️ 7 m/s · 3°C</div>
+        </div>
+      </div>
+
+      <!-- bell -->
       <button class="icon-btn" type="button" data-action="toggle-notify" aria-label="Benachrichtigungen">
         <span class="badge" aria-label="2 Benachrichtigungen">2</span>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -304,6 +357,7 @@
         <span class="sr-only">Benachrichtigungen</span>
       </button>
 
+      <!-- menu -->
       <button class="icon-btn" type="button" data-action="toggle-menu" aria-label="Menü">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <line x1="4" y1="7" x2="20" y2="7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -381,7 +435,7 @@
 
     <section id="account" class="section" data-inner-scroll="true">
       <div class="inner-container">
-        <div class="page-content" style="opacity:.95;">Konto (Demo)</div>
+        <div class="page-content">Konto (Demo)</div>
       </div>
     </section>
   </main>
@@ -399,10 +453,10 @@
       stack: document.getElementById("sections"),
       bgA: document.getElementById("bgA"),
       bgB: document.getElementById("bgB"),
-
       actions: document.getElementById("topbar-actions"),
       notifyPanel: document.getElementById("notify-panel"),
       menuPanel: document.getElementById("menu-panel"),
+      topbar: document.getElementById("topbar"),
     };
 
     init().catch(console.error);
@@ -446,7 +500,7 @@
         }
       });
 
-      document.getElementById("menu-panel").addEventListener("click", (e) => {
+      el.menuPanel.addEventListener("click", (e) => {
         const t = e.target.closest("[data-target],[data-action]");
         if(!t) return;
 
@@ -472,7 +526,7 @@
 
       window.addEventListener("click", (e) => {
         const path = e.composedPath ? e.composedPath() : [];
-        const clickedTopbar = path.includes(document.getElementById("topbar"));
+        const clickedTopbar = path.includes(el.topbar);
         const clickedNotify = path.includes(el.notifyPanel);
         const clickedMenu = path.includes(el.menuPanel);
         if (!clickedTopbar && !clickedNotify && !clickedMenu) closeAll();
@@ -541,7 +595,7 @@
         if(!res.ok) throw new Error(`Fetch failed ${res.status} for ${url}`);
         container.innerHTML = await res.text();
       }catch(err){
-        container.innerHTML = `<div style="opacity:.9;">Fehler beim Laden: ${escapeHtml(url)}</div>`;
+        container.innerHTML = `<div style="opacity:.75;">Fehler beim Laden: ${escapeHtml(url)}</div>`;
         console.error(err);
       }
     }
