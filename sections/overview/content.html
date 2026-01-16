@@ -224,21 +224,25 @@
   </div>
 
   <script>
-    (function(){
-      // Wenn content.html direkt geöffnet wird: /sections/overview/...
-      // Wenn per index geladen wird: /WindKompass/...
-      const inOverviewFolder = location.pathname.includes("/sections/overview/");
-      const base = inOverviewFolder ? "" : "sections/overview/";
+(function(){
+  // GitHub Pages: /<repo>/...  -> repo = "WindKompass"
+  const parts = location.pathname.split("/").filter(Boolean);
+  const repo = parts.length ? parts[0] : "";
+  const root = repo ? `/${repo}/` : "/";
 
-      // Embeds
-      document.getElementById("iframeAnlage").src = base + "anlagen_embed.html";
-      document.getElementById("iframeMarkt").src  = base + "markt_embed.html";
+  // Embeds
+  document.getElementById("iframeAnlage").src = root + "sections/overview/anlagen_embed.html";
+  document.getElementById("iframeMarkt").src  = root + "sections/overview/markt_embed.html";
 
-      // Avatar (immer assets/profile/user.png)
-      const avatarPath = (inOverviewFolder ? "../../" : "") + "assets/profile/user.png";
-      document.getElementById("avatarPark").src = avatarPath;
-      document.getElementById("avatarDV").src   = avatarPath;
-    })();
-  </script>
+  // Avatar
+  const avatar = root + "assets/profile/user.png";
+  document.getElementById("avatarPark").src = avatar;
+  document.getElementById("avatarDV").src   = avatar;
+
+  // Debug falls was fehlt
+  document.getElementById("avatarPark").onerror = () => console.log("Avatar fehlt:", avatar);
+})();
+</script>
+
 </body>
 </html>
