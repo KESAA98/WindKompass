@@ -7,39 +7,26 @@
 
   <style>
     :root{
-      /* layout */
       --topbar-h: 64px;
       --page-pad-x: 28px;
       --page-pad-y: 28px;
 
-      /* content sizing */
-      --inner-max: 1440px;           /* breiter */
-      --inner-pad-x: 22px;
-      --inner-pad-y: 44px;           /* oben/unten doppelt so viel */
+      --inner-max: 1600px;         /* breiter */
+      --inner-pad-x: 26px;
+      --inner-pad-y: 52px;         /* oben/unten deutlich mehr */
 
-      /* clean white surfaces */
-      --surface: rgba(255,255,255,.86);   /* weiss + transparent */
-      --surface-strong: rgba(255,255,255,.92);
+      --surface: rgba(255,255,255,.82);       /* content background (weiß/transparent) */
+      --panel: rgba(255,255,255,.92);         /* dropdown background */
       --border: rgba(15,23,42,.10);
-      --shadow: 0 18px 40px rgba(0,0,0,.18);
+      --shadow: 0 16px 34px rgba(0,0,0,.16);
 
-      /* bg */
-      --bg-overlay: rgba(0,0,0,.30);
-
-      /* motion */
-      --snap-ms: 520ms;
-      --fade-ms: 1200ms;
-
-      /* text */
       --text: #0f172a;
       --muted: rgba(15,23,42,.62);
 
-      /* controls */
-      --btn: rgba(15,23,42,.05);
-      --btn-hover: rgba(15,23,42,.08);
-      --item-hover: rgba(15,23,42,.04);
-      --danger: rgba(225,29,72,.10);
-      --danger-hover: rgba(225,29,72,.14);
+      --bg-overlay: rgba(0,0,0,.28);
+
+      --snap-ms: 520ms;
+      --fade-ms: 1200ms;
     }
 
     *{ box-sizing:border-box; }
@@ -48,6 +35,7 @@
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
       overflow:hidden;
       background:#000;
+      color: var(--text);
     }
     .sr-only{
       position:absolute; width:1px; height:1px; padding:0; margin:-1px;
@@ -66,75 +54,58 @@
     #video-bg video.is-visible{ opacity:1; }
     #video-bg .bg-overlay{ position:absolute; inset:0; background: var(--bg-overlay); }
 
-    /* GLOBAL TOPBAR (clean, no logo bubble) */
+    /* TOPBAR (full width) */
     #topbar{
       position:fixed;
       top:0; left:0; right:0;
       height: var(--topbar-h);
       z-index: 100;
 
-      background: rgba(255,255,255,.94);
+      background: rgba(255,255,255,.90);
       border-bottom: 1px solid var(--border);
-      box-shadow: 0 10px 24px rgba(0,0,0,.12);
+      box-shadow: 0 8px 18px rgba(0,0,0,.10);
 
       display:flex;
       align-items:center;
       justify-content:space-between;
       padding: 10px var(--page-pad-x);
-      color: var(--text);
+      gap: 12px;
     }
 
+    /* LEFT: only logo */
     .brand{
       display:flex;
       align-items:center;
-      gap: 12px;
+      gap: 0;
       min-width: 0;
     }
     .brand img{
-      width: 38px;
-      height: 38px;
+      width: 42px;
+      height: 42px;
       object-fit: contain;
       display:block;
     }
-    .brand-title{
-      display:flex;
-      flex-direction:column;
-      gap:2px;
-      min-width:0;
-    }
-    .brand-title .name{
-      font-size: 14px;
-      font-weight: 600;
-      letter-spacing: .01em;
-      white-space: nowrap;
-      overflow:hidden;
-      text-overflow: ellipsis;
-    }
-    .brand-title .sub{
-      font-size: 12px;
-      color: var(--muted);
-      white-space: nowrap;
-      overflow:hidden;
-      text-overflow: ellipsis;
-    }
 
+    /* RIGHT */
     .right{
       display:flex;
       align-items:center;
-      gap: 10px;
+      gap: 12px;
       position:relative;
     }
 
-    /* profile / weather box */
+    /* profile/weather (slimmer) */
     .profilebox{
       display:flex;
       align-items:center;
       gap: 10px;
 
       padding: 6px 10px;
-      border-radius: 14px;
-      border: 1px solid var(--border);
-      background: rgba(15,23,42,.03);
+      border-radius: 999px;
+      border: 1px solid rgba(15,23,42,.10);
+      background: rgba(255,255,255,.65);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
     }
     .profilebox img{
       width: 34px;
@@ -165,21 +136,27 @@
       white-space: nowrap;
     }
 
+    /* ICONS: bigger, no visible container */
     .icon-btn{
-      width: 40px;
-      height: 40px;
-      border-radius: 14px;
-      border: 1px solid var(--border);
-      background: var(--btn);
+      width: 44px;
+      height: 44px;
+      border-radius: 999px;
+
+      border: 0;
+      background: transparent;
       cursor:pointer;
       display:grid;
       place-items:center;
-      transition: background 140ms ease, transform 140ms ease;
+
+      transition: transform 140ms ease, background 140ms ease;
       position:relative;
       padding:0;
       color: var(--text);
     }
-    .icon-btn:hover{ background: var(--btn-hover); transform: translateY(-1px); }
+    .icon-btn:hover{
+      transform: translateY(-1px);
+      background: rgba(15,23,42,.04); /* super dezent */
+    }
     .icon-btn:focus{ outline: 2px solid rgba(15,23,42,.18); outline-offset: 2px; }
     .icon-btn svg{ display:block; }
 
@@ -197,19 +174,19 @@
       line-height: 18px;
       font-weight: 700;
       text-align:center;
-      box-shadow: 0 8px 18px rgba(225,29,72,.22);
+      box-shadow: 0 8px 16px rgba(225,29,72,.20);
     }
 
-    /* dropdowns (light + clean) */
+    /* DROPDOWNS: light & clean (not fat/boxed) */
     .dropdown{
       position: fixed;
       top: calc(var(--topbar-h) + 10px);
       right: var(--page-pad-x);
-      width: 340px;
+      width: 320px;
 
-      background: var(--surface-strong);
+      background: var(--panel);
       color: var(--text);
-      border: 1px solid var(--border);
+      border: 1px solid rgba(15,23,42,.10);
       border-radius: 16px;
       box-shadow: var(--shadow);
 
@@ -219,6 +196,8 @@
       transition: opacity 140ms ease, transform 160ms ease;
       overflow:hidden;
       z-index: 120;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
     }
     .dropdown.is-open{
       opacity: 1;
@@ -226,39 +205,48 @@
       transform: translateY(0);
     }
     .drop-head{
-      padding: 12px 14px 10px 14px;
-      font-size: 12px;
-      letter-spacing: .06em;
+      padding: 10px 14px;
+      font-size: 11px;
+      letter-spacing: .08em;
       text-transform: uppercase;
-      color: rgba(15,23,42,.55);
+      color: rgba(15,23,42,.52);
       border-bottom: 1px solid rgba(15,23,42,.08);
-      background: rgba(255,255,255,.65);
+      background: rgba(255,255,255,.55);
     }
+
     .drop-list{
       list-style:none;
       margin:0;
       padding: 8px;
       display:flex;
       flex-direction:column;
-      gap: 4px;
+      gap: 2px; /* weniger Abstand */
     }
+
     .drop-item{
       width:100%;
       border: 0;
-      border-radius: 12px;
-      padding: 10px 10px;
+      border-radius: 10px;
+      padding: 9px 10px;   /* weniger “klobig” */
       background: transparent;
       cursor:pointer;
       text-align:left;
       color: var(--text);
-      transition: background 140ms ease;
+      transition: background 120ms ease;
       display:flex;
       flex-direction:column;
       gap: 4px;
     }
-    .drop-item:hover{ background: var(--item-hover); }
-    .drop-title{ font-weight: 600; font-size: 13px; }
-    .drop-sub{ font-size: 12px; color: var(--muted); }
+    .drop-item:hover{ background: rgba(15,23,42,.04); }
+
+    .drop-title{
+      font-weight: 500;   /* nicht fett */
+      font-size: 13px;
+    }
+    .drop-sub{
+      font-size: 12px;
+      color: var(--muted);
+    }
 
     .sep{
       height:1px;
@@ -266,8 +254,9 @@
       margin: 6px 8px;
       border:0;
     }
-    .drop-item.logout{ background: var(--danger); }
-    .drop-item.logout:hover{ background: var(--danger-hover); }
+
+    .drop-item.logout{ background: rgba(225,29,72,.08); }
+    .drop-item.logout:hover{ background: rgba(225,29,72,.12); }
 
     /* SECTIONS STACK */
     #sections{
@@ -289,7 +278,7 @@
       justify-content:center;
     }
 
-    /* CONTENT CONTAINER (white/translucent + wider + more vertical padding) */
+    /* CONTENT CONTAINER */
     .inner-container{
       width: min(var(--inner-max), 100%);
       height: calc(100vh - (var(--topbar-h) + (var(--page-pad-y) * 2)));
@@ -310,11 +299,10 @@
       padding-right: 10px;
     }
 
-    @media (max-width: 640px){
-      :root{ --page-pad-x: 14px; --page-pad-y: 16px; --inner-pad-y: 34px; }
-      .brand-title .sub{ display:none; }
-      .dropdown{ width: min(340px, calc(100vw - 28px)); right: 14px; }
+    @media (max-width: 780px){
+      :root{ --page-pad-x: 14px; --page-pad-y: 16px; --inner-pad-y: 38px; }
       .profilebox{ display:none; }
+      .dropdown{ width: min(320px, calc(100vw - 28px)); right: 14px; }
     }
   </style>
 </head>
@@ -326,40 +314,33 @@
     <div class="bg-overlay"></div>
   </div>
 
-  <!-- TOPBAR -->
   <header id="topbar">
     <div class="brand">
-      <!-- PNG -->
-      <img src="assets/logo/windkompass_logo.png" alt="WES WindKompass Logo" />
-      <div class="brand-title">
-        <div class="name">WES WindKompass</div>
-        <div class="sub">Monitoring &amp; Auswertung</div>
-      </div>
+      <!-- FIX: richtiges Logo -->
+      <img src="assets/logo/wes_windkompass.png" alt="WES WindKompass" />
     </div>
 
     <div class="right" id="topbar-actions">
-      <!-- profile + wind/temp -->
       <div class="profilebox">
         <img src="assets/profile/user.png" alt="Profil" />
         <div class="metas">
-          <div class="user">Kevin</div>
+          <!-- FIX: User_Name statt Name -->
+          <div class="user">User_Name</div>
           <div class="wx">🌬️ 7 m/s · 3°C</div>
         </div>
       </div>
 
-      <!-- bell -->
       <button class="icon-btn" type="button" data-action="toggle-notify" aria-label="Benachrichtigungen">
         <span class="badge" aria-label="2 Benachrichtigungen">2</span>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2Z" fill="currentColor" opacity=".85"/>
           <path d="M18 16v-5a6 6 0 1 0-12 0v5l-2 2h16l-2-2Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" opacity=".85"/>
         </svg>
         <span class="sr-only">Benachrichtigungen</span>
       </button>
 
-      <!-- menu -->
       <button class="icon-btn" type="button" data-action="toggle-menu" aria-label="Menü">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <line x1="4" y1="7" x2="20" y2="7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           <line x1="4" y1="17" x2="20" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -369,7 +350,6 @@
     </div>
   </header>
 
-  <!-- DROPDOWNS -->
   <div class="dropdown" id="notify-panel" role="menu" aria-label="Benachrichtigungen">
     <div class="drop-head">Benachrichtigungen</div>
     <ul class="drop-list">
@@ -407,7 +387,6 @@
     </ul>
   </div>
 
-  <!-- SECTIONS -->
   <main id="sections">
     <section id="overview" class="section" data-inner-scroll="false">
       <div class="inner-container">
@@ -485,7 +464,6 @@
         if(!btn) return;
 
         const a = btn.getAttribute("data-action");
-
         if (a === "toggle-notify"){
           const willOpen = !el.notifyPanel.classList.contains("is-open");
           closeAll();
@@ -512,14 +490,8 @@
           if (i >= 0) goTo(i);
           closeAll();
         }
-        if (action === "logout"){
-          alert("Abmelden (Demo)");
-          closeAll();
-        }
-        if (action === "impressum"){
-          alert("Impressum & Rechtliches (Demo)");
-          closeAll();
-        }
+        if (action === "logout"){ alert("Abmelden (Demo)"); closeAll(); }
+        if (action === "impressum"){ alert("Impressum & Rechtliches (Demo)"); closeAll(); }
       });
 
       window.addEventListener("keydown", (e) => { if (e.key === "Escape") closeAll(); });
