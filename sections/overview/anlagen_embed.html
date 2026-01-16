@@ -24,36 +24,45 @@
     }
 
     *{box-sizing:border-box}
+    html,body{height:100%}
     body{
       margin:0;
-      background:var(--bg);
+      background:transparent; /* wichtig fürs Einpassen */
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       color:var(--text);
+      overflow:hidden; /* kein Scroll */
     }
 
-    .wrap{max-width:none;margin:0;padding:0;}
-
-    /* Embed: keine Extra-Card im Content-Container */
-    html,body{height:100%;}
-    body{background:transparent;}
-    .panel{border:0;border-radius:0;background:transparent;}
-
+    /* EMBED: keine Außenabstände / keine Card */
+    .wrap{
+      height:100%;
+      max-width:none;
+      margin:0;
+      padding:0;
+    }
 
     .panel{
-      background:var(--card);
-      border:1px solid var(--border);
-      border-radius:16px;
+      height:100%;
+      background:transparent;
+      border:none;
+      border-radius:0;
       overflow:hidden;
+
+      display:flex;
+      flex-direction:column;
+      min-height:0;
     }
 
     .head{
-      padding:18px;
+      padding:18px 18px 14px 18px;
+      flex:0 0 auto;
     }
 
     .title{
       margin:0;
       font-size:18px;
       font-weight:650;
+      letter-spacing:.2px;
     }
 
     .sub{
@@ -63,15 +72,20 @@
     }
 
     .body{
+      flex:1 1 auto;
+      min-height:0;          /* wichtig gegen Scroll */
       display:grid;
       grid-template-columns:1.65fr .85fr;
       border-top:1px solid var(--border);
-      min-height:420px;
     }
 
     /* LEFT */
     .left{
-      padding:16px 18px;
+      padding:16px 18px 14px 18px;
+      display:flex;
+      flex-direction:column;
+      min-height:0;
+      gap:10px;
     }
 
     .legend{
@@ -79,15 +93,29 @@
       color:var(--muted);
       display:flex;
       gap:14px;
-      margin-bottom:10px;
+      user-select:none;
+      flex:0 0 auto;
     }
 
     .dot{
       width:9px;height:9px;border-radius:50%;
       display:inline-block;margin-right:6px;
+      transform:translateY(1px);
     }
 
-    canvas{width:100%;height:360px;}
+    /* Canvas muss die Resthöhe bekommen */
+    .chartWrap{
+      flex:1 1 auto;
+      min-height:0;
+      overflow:hidden;
+      border-radius:12px;
+    }
+
+    canvas{
+      width:100%;
+      height:100%;
+      display:block;
+    }
 
     /* RIGHT */
     .right{
@@ -96,6 +124,7 @@
       display:flex;
       flex-direction:column;
       gap:18px;
+      min-height:0;
     }
 
     .kpi{
@@ -110,6 +139,7 @@
     .kpiValue{
       font-size:26px;
       font-weight:600;
+      line-height:1.1;
     }
 
     .kpiSub{
@@ -122,7 +152,6 @@
       background:var(--border);
     }
 
-    /* EVENTS */
     .events{
       display:flex;
       flex-direction:column;
@@ -144,6 +173,7 @@
     .event.warn{background:rgba(250,204,21,.25);color:#854d0e;}
 
     @media(max-width:900px){
+      body{overflow:auto;} /* mobil darf scrollen */
       .body{grid-template-columns:1fr}
       .right{border-left:none;border-top:1px solid var(--border)}
     }
@@ -151,110 +181,108 @@
 </head>
 
 <body>
-<div class="wrap">
-  <div class="panel">
-
-    <div class="head">
-      <h1 class="title">Ihre Anlage im Überblick</h1>
-      <div class="sub">Anlage 300436 · Januar 2026</div>
-    </div>
-
-    <div class="body">
-      <!-- LEFT -->
-      <div class="left">
-        <div class="legend">
-          <span><span class="dot" style="background:var(--wind)"></span>Windgeschwindigkeit (m/s)</span>
-          <span><span class="dot" style="background:var(--power)"></span>Leistung (MW)</span>
-        </div>
-        <canvas id="chart"></canvas>
+  <div class="wrap">
+    <div class="panel">
+      <div class="head">
+        <h1 class="title">Ihre Anlage im Überblick</h1>
+        <div class="sub">Anlage 300436 · Januar 2026</div>
       </div>
 
-      <!-- RIGHT -->
-      <div class="right">
-        <div class="kpi">
-          <div class="kpiLabel">Gesamtproduktion Monat</div>
-          <div class="kpiValue">1.284 MWh</div>
-          <div class="kpiSub">Januar 2026</div>
+      <div class="body">
+        <div class="left">
+          <div class="legend">
+            <span><span class="dot" style="background:var(--wind)"></span>Windgeschwindigkeit (m/s)</span>
+            <span><span class="dot" style="background:var(--power)"></span>Leistung (MW)</span>
+          </div>
+
+          <div class="chartWrap">
+            <canvas id="chart"></canvas>
+          </div>
         </div>
 
-        <div class="divider"></div>
-
-        <div class="kpi">
-          <div class="kpiLabel">Aktuelle Windgeschwindigkeit</div>
-          <div class="kpiValue">8,4 m/s</div>
-        </div>
-
-        <div class="divider"></div>
-
-        <div class="kpi">
-          <div class="kpiLabel">Aktuelle Leistung</div>
-          <div class="kpiValue">2,6 MW</div>
-        </div>
-
-        <div class="divider"></div>
-
-        <div class="events">
-          <div class="event error">
-            <span>Störung Umrichter</span>
-            <span>WEA 206054</span>
+        <div class="right">
+          <div class="kpi">
+            <div class="kpiLabel">Gesamtproduktion Monat</div>
+            <div class="kpiValue">1.284 MWh</div>
+            <div class="kpiSub">Januar 2026</div>
           </div>
-          <div class="event ice">
-            <span>Eisansatz erkannt</span>
-            <span>WEA 784475</span>
+
+          <div class="divider"></div>
+
+          <div class="kpi">
+            <div class="kpiLabel">Aktuelle Windgeschwindigkeit</div>
+            <div class="kpiValue">8,4 m/s</div>
           </div>
-          <div class="event warn">
-            <span>Wenig Getriebeöl</span>
-            <span>WEA 301586</span>
+
+          <div class="divider"></div>
+
+          <div class="kpi">
+            <div class="kpiLabel">Aktuelle Leistung</div>
+            <div class="kpiValue">2,6 MW</div>
           </div>
-          <div class="event warn">
-            <span>Yaw-Thermo Warnung</span>
-            <span>WEA 300436</span>
+
+          <div class="divider"></div>
+
+          <div class="events">
+            <div class="event error"><span>Störung Umrichter</span><span>WEA 206054</span></div>
+            <div class="event ice"><span>Eisansatz erkannt</span><span>WEA 784475</span></div>
+            <div class="event warn"><span>Wenig Getriebeöl</span><span>WEA 301586</span></div>
+            <div class="event warn"><span>Yaw-Thermo Warnung</span><span>WEA 300436</span></div>
           </div>
         </div>
       </div>
     </div>
-
   </div>
-</div>
 
 <script>
-const c = document.getElementById("chart");
-const ctx = c.getContext("2d");
+(() => {
+  const c = document.getElementById("chart");
+  const ctx = c.getContext("2d");
 
-function resize(){
-  c.width = c.clientWidth * devicePixelRatio;
-  c.height = c.clientHeight * devicePixelRatio;
-}
-resize();
+  const wind  = [6,7,8,9,10,9,8,7,6];
+  const power = [1.2,1.8,2.4,3.0,3.2,3.0,2.5,2.0,1.4];
+  const max = Math.max(...wind, ...power);
 
-const wind = [6,7,8,9,10,9,8,7,6];
-const power = [1.2,1.8,2.4,3.0,3.2,3.0,2.5,2.0,1.4];
+  function resizeAndDraw(){
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    const rect = c.getBoundingClientRect();
 
-const max = Math.max(...wind,...power);
+    c.width  = Math.max(1, Math.round(rect.width  * dpr));
+    c.height = Math.max(1, Math.round(rect.height * dpr));
 
-ctx.scale(devicePixelRatio,devicePixelRatio);
-ctx.strokeStyle = "#e5e7eb";
-for(let i=0;i<5;i++){
-  const y = (c.clientHeight/4)*i;
-  ctx.beginPath();
-  ctx.moveTo(0,y);
-  ctx.lineTo(c.clientWidth,y);
-  ctx.stroke();
-}
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,rect.width,rect.height);
 
-function drawLine(data,color){
-  ctx.beginPath();
-  ctx.strokeStyle = color;
-  data.forEach((v,i)=>{
-    const x = (c.clientWidth/(data.length-1))*i;
-    const y = c.clientHeight - (v/max)*c.clientHeight;
-    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
-  });
-  ctx.stroke();
-}
+    // grid
+    ctx.strokeStyle = "#e5e7eb";
+    ctx.lineWidth = 1;
+    for(let i=0;i<5;i++){
+      const y = (rect.height/4)*i;
+      ctx.beginPath();
+      ctx.moveTo(0,y);
+      ctx.lineTo(rect.width,y);
+      ctx.stroke();
+    }
 
-drawLine(wind,"#6b7280");
-drawLine(power,"#16a34a");
+    function drawLine(data,color){
+      ctx.beginPath();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = (color === "#16a34a") ? 2 : 1.6;
+      data.forEach((v,i)=>{
+        const x = (rect.width/(data.length-1))*i;
+        const y = rect.height - (v/max)*rect.height;
+        i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+      });
+      ctx.stroke();
+    }
+
+    drawLine(wind,  "#6b7280");
+    drawLine(power, "#16a34a");
+  }
+
+  resizeAndDraw();
+  window.addEventListener("resize", resizeAndDraw);
+})();
 </script>
 </body>
 </html>
