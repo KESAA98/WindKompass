@@ -1,14 +1,14 @@
 {
-  "updated_utc": "2026-01-23T01:15:34.052952Z",
+  "updated_utc": "2026-01-23T06:26:25.325362Z",
   "bzn": "MW Wind Onshore",
   "tz": "Europe/Berlin",
   "month": "2026-01",
   "range": {
     "start_local": "2026-01-01T00:00:00+01:00",
     "end_local": "2026-01-31T23:59:59+01:00",
-    "cut_after_local": "2026-01-23T02:15:27.237639+01:00"
+    "cut_after_local": "2026-01-23T07:26:19.576119+01:00"
   },
-  "estimate_eur_mwh": 89.0,
+  "estimate_eur_mwh": 89.08,
   "series_6h": [
     {
       "label": "01.01 00:00",
@@ -352,7 +352,7 @@
     },
     {
       "label": "22.01 06:00",
-      "value": 113.55
+      "value": 111.04
     },
     {
       "label": "22.01 12:00",
@@ -364,10 +364,14 @@
     },
     {
       "label": "23.01 00:00",
-      "value": 96.68
+      "value": 95.88
+    },
+    {
+      "label": "23.01 06:00",
+      "value": 116.57
     }
   ],
-  "estimate_spot_eur_mwh": 104.4,
+  "estimate_spot_eur_mwh": 104.45,
   "series_6h_spot": [
     {
       "label": "01.01 00:00",
@@ -723,17 +727,21 @@
     },
     {
       "label": "23.01 00:00",
-      "value": 95.83
+      "value": 95.87
+    },
+    {
+      "label": "23.01 06:00",
+      "value": 129.85
     }
   ],
   "official_eur_mwh": null,
   "official_available": false,
-  "official_checked_utc": "2026-01-23T01:15:34.053057Z",
+  "official_checked_utc": "2026-01-23T06:26:25.325464Z",
   "today_index": 22,
   "debug": {
     "price_hours": 552,
-    "wind_hours": 553,
-    "bucket_count_weighted": 89,
-    "bucket_count_spot": 89
+    "wind_hours": 558,
+    "bucket_count_weighted": 90,
+    "bucket_count_spot": 90
   }
 }
