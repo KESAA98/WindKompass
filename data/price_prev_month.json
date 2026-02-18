@@ -1,5 +1,5 @@
 {
-  "updated_utc": "2026-02-18T01:44:57.268637Z",
+  "updated_utc": "2026-02-18T06:55:33.580911Z",
   "bzn": "MW Wind Onshore",
   "tz": "Europe/Berlin",
   "month": "2026-01",
@@ -1008,7 +1008,7 @@
   ],
   "official_eur_mwh": null,
   "official_available": false,
-  "official_checked_utc": "2026-02-18T01:44:57.268773Z",
+  "official_checked_utc": "2026-02-18T06:55:33.581053Z",
   "today_index": 30,
   "debug": {
     "price_hours": 744,
